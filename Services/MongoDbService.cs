@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 using ToolBox.Configuration;
-using ToolBox.Models;
+using ToolBox.Domain.Entities;
 
 namespace ToolBox.Services;
 

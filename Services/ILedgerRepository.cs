@@ -1,4 +1,4 @@
-using ToolBox.Models;
+using ToolBox.Domain.Entities;
 
 namespace ToolBox.Services;
 

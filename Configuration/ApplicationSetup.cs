@@ -29,23 +29,34 @@ public static class ApplicationSetup
     {
         var services = new ServiceCollection();
 
-        // Add logging
+        ConfigureLogging(services);
+        ConfigureOptions(services, configuration);
+        RegisterServices(services);
+
+        return services.BuildServiceProvider();
+    }
+
+    private static void ConfigureLogging(IServiceCollection services)
+    {
         services.AddLogging(builder =>
         {
             builder.ClearProviders();
             builder.AddSerilog(dispose: true);
         });
+    }
 
-        // Add configuration
+    private static void ConfigureOptions(IServiceCollection services, IConfiguration configuration)
+    {
         services.AddSingleton(configuration);
-
-        // Add services
         services.Configure<MongoDbSettings>(configuration.GetSection("MongoDB"));
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<MongoDbSettings>>().Value);
+    }
+
+    private static void RegisterServices(IServiceCollection services)
+    {
         services.AddScoped<ILedgerRepository, MongoDbService>();
+        services.AddSingleton<ICsvReaderService, CsvReaderService>();
         services.AddSingleton<CsvImportService>();
         services.AddSingleton<ConsoleService>();
-
-        return services.BuildServiceProvider();
     }
 }
