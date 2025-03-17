@@ -12,7 +12,7 @@ public class CsvImportService(
     ILogger<CsvImportService> logger,
     IConfiguration configuration)
 {
-    private readonly int _batchSize = configuration.GetValue("BatchSize", 1000);
+    private readonly int _batchSize = configuration.GetValue("BatchSize", 5000);
 
     public async Task<ImportResult> ImportCsvToMongoAsync(string csvFilePath)
     {

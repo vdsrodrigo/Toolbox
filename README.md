@@ -8,53 +8,84 @@ O ToolBox é uma aplicação de console desenvolvida em .NET que facilita a impo
 
 ```
 ToolBox/
+├── Domain/
+│   ├── Entities/
+│   │   └── Ledger.cs         # Entidade de domínio
+│   └── Exceptions/
+│       └── DomainException.cs # Exceções de domínio
 ├── Models/
-│   └── Ledger.cs              # Modelos de dados para MongoDB e CSV
+│   ├── CsvMember.cs          # DTO para mapeamento do CSV
+│   └── ImportResult.cs       # Modelo para resultado da importação
 ├── Services/
-│   ├── CsvImportService.cs    # Serviço para leitura e processamento do CSV
-│   └── MongoDbService.cs      # Serviço para operações com MongoDB
-├── Program.cs                 # Ponto de entrada da aplicação
-└── appsettings.json           # Configurações da aplicação
+│   ├── CsvImportService.cs   # Serviço principal de importação
+│   ├── CsvReaderService.cs   # Serviço de leitura do CSV
+│   ├── MongoDbService.cs     # Implementação do repositório MongoDB
+│   └── ConsoleService.cs     # Serviço de apresentação no console
+├── Configuration/
+│   ├── ApplicationSetup.cs   # Configuração da aplicação
+│   └── MongoDbSettings.cs    # Configurações do MongoDB
+└── Program.cs                # Ponto de entrada da aplicação
 ```
 
 ## ✨ Principais Funcionalidades
 
 - 🔄 Importação em lotes (batch processing) para melhor performance
-- 📈 Criação automática de índice único no campo CPF para evitar duplicações
-- 📊 Relatório detalhado de estatísticas após a importação
-- 📝 Log completo de operações usando Serilog
-- ⚙️ Configuração flexível via arquivo appsettings.json
+- 📈 Criação automática de índice único no campo CPF
+- 📊 Relatório detalhado de estatísticas de importação
+- 📝 Logging estruturado com Serilog
+- ⚙️ Configuração flexível via appsettings.json
 - 🛡️ Tratamento robusto de erros e exceções
+- 🎯 Design orientado a domínio (DDD)
+- 🔌 Arquitetura modular e extensível
 
 ## 🔍 Como Funciona
 
 O sistema realiza a importação seguindo estas etapas:
 
-1. **Configuração**: Carrega as configurações do MongoDB e do processo de importação
-2. **Preparação**: Cria um índice único no campo CPF se ele não existir
-3. **Leitura CSV**: Processa o arquivo CSV linha por linha usando CsvHelper
-4. **Mapeamento**: Converte cada registro do CSV para o modelo Ledger
-5. **Processamento em Lotes**: Insere os registros no MongoDB em lotes de tamanho configurável
-6. **Relatório**: Gera estatísticas detalhadas do processo de importação
+1. **Configuração**: Carrega configurações via `ApplicationSetup`
+2. **Preparação**: Cria índice único no CPF via `ILedgerRepository`
+3. **Leitura CSV**: Processa o arquivo usando `ICsvReaderService`
+4. **Mapeamento**: Converte registros CSV para entidades `Ledger`
+5. **Processamento**: Insere lotes via `ILedgerRepository`
+6. **Relatório**: Gera estatísticas via `ConsoleService`
 
-## 📋 Modelo de Dados 
+## 📋 Modelos e Entidades
 
-### Ledger (MongoDB)
-- `Id`: ObjectId gerado pelo MongoDB
-- `Cpf`: Número de identificação do membro (campo com índice único)
-- `CreatedAt`: Data de criação do registro
-- `LedgerTypeId`: Identificador do tipo de ledger (fixo como 1)
-- `Points`: Pontos acumulados (pode ser nulo)
-- `PointsBlocked`: Pontos bloqueados (padrão 0)
-- `Status`: Status do ledger (padrão "Ativo")
+### Ledger (Entidade de Domínio)
+```csharp
+public class Ledger
+{
+    public string Cpf { get; private set; }
+    public DateTime CreatedAt { get; private set; }
+    public int LedgerTypeId { get; private set; }
+    public int? Points { get; private set; }
+    public int PointsBlocked { get; private set; }
+    public string Status { get; private set; }
+}
+```
 
-### CsvMember (Entrada)
-- `LOYMEMBERID`: ID do membro no sistema de lealdade
-- `MEMBERPEOMEMNUM`: Número de CPF do membro
+### CsvMember (DTO)
+```csharp
+public class CsvMember
+{
+    public string LoyMemberId { get; set; }
+    public string MemberPeoMemNum { get; set; }
+}
+```
+
+### ImportResult (Modelo)
+```csharp
+public record ImportResult
+{
+    public long TotalRecords { get; set; }
+    public long InsertedRecords { get; set; }
+    public long TotalBatches { get; set; }
+    public long FailedBatches { get; set; }
+    public double DurationMs { get; set; }
+}
+```
 
 ## ⚙️ Configuração
-
-As configurações são armazenadas no arquivo `appsettings.json`:
 
 ```json
 {
@@ -63,9 +94,7 @@ As configurações são armazenadas no arquivo `appsettings.json`:
     "DatabaseName": "plis-core",
     "CollectionName": "ledgers"
   },
-  "ImportSettings": {
-    "BatchSize": 5000
-  },
+  "BatchSize": 1000,
   "Serilog": {
     "MinimumLevel": {
       "Default": "Information",
@@ -75,9 +104,7 @@ As configurações são armazenadas no arquivo `appsettings.json`:
       }
     },
     "WriteTo": [
-      {
-        "Name": "Console"
-      },
+      { "Name": "Console" },
       {
         "Name": "File",
         "Args": {
@@ -97,56 +124,59 @@ As configurações são armazenadas no arquivo `appsettings.json`:
 ```bash
 dotnet run
 ```
-Isso importará o arquivo padrão `members_without_ledger.csv` localizado na pasta da aplicação.
+Importa o arquivo padrão `members_without_ledger.csv` da pasta da aplicação.
 
 ### Especificando Arquivo CSV
 ```bash
 dotnet run -- /caminho/para/seu/arquivo.csv
 ```
 
-## 📈 Performance e Escalabilidade
+## 📈 Design e Arquitetura
 
-A aplicação foi projetada pensando em performance:
+A aplicação segue princípios modernos de design:
 
-- ⚡ Processamento em lotes de 5000 registros (configurável)
-- 🔍 Indexação para evitar duplicatas e melhorar performance de escrita
-- 🧵 Operações assíncronas para melhor utilização de recursos
-- 📊 Medição de tempo e taxa de importação (registros por segundo)
+- 🎯 **Domain-Driven Design (DDD)**
+  - Entidades ricas com comportamento encapsulado
+  - Exceções de domínio personalizadas
+  - Separação clara entre domínio e infraestrutura
+
+- 🔌 **SOLID**
+  - Single Responsibility Principle (classes coesas)
+  - Open/Closed Principle (interfaces extensíveis)
+  - Liskov Substitution (implementações intercambiáveis)
+  - Interface Segregation (interfaces específicas)
+  - Dependency Inversion (inversão de controle)
+
+- 🏗️ **Clean Architecture**
+  - Separação em camadas
+  - Dependências apontando para dentro
+  - Domínio independente de infraestrutura
+
+## 📊 Performance
+
+- ⚡ Processamento em lotes configurável
+- 🔍 Indexação otimizada
+- 🧵 Operações assíncronas
+- 📊 Métricas detalhadas de performance
 
 ## 📝 Logs e Monitoramento
 
-O sistema utiliza Serilog para registrar logs detalhados:
-
-- 📄 Logs em arquivo com rotação diária
-- 🖥️ Logs no console para acompanhamento em tempo real
-- 🔍 Informações enriquecidas com contexto, nome da máquina e ID da thread
+Sistema de logging estruturado com Serilog:
+- 📄 Logs em arquivo com rotação
+- 🖥️ Logs em console
+- 🔍 Contexto enriquecido
 
 ## 🔧 Tratamento de Erros
 
-A aplicação implementa tratamento robusto de erros:
-
-- 🛡️ Detecção e relatório de erro nos lotes
-- 📊 Contagem de registros com sucesso mesmo em caso de falhas parciais
-- 🔄 Processamento continua mesmo quando um lote falha
-
-## 📋 Resultado da Importação
-
-Ao final do processo, o sistema exibe estatísticas detalhadas:
-
-- Total de registros processados
-- Total de registros importados com sucesso
-- Número total de lotes
-- Número de lotes com falha
-- Duração total da operação
-- Taxa média de importação (registros por segundo)
-
----
+- 🛡️ Exceções de domínio personalizadas
+- 📊 Contabilização de sucessos/falhas
+- 🔄 Resiliência a falhas parciais
 
 ## 📚 Tecnologias Utilizadas
 
-- **.NET Core**: Framework para a aplicação
-- **MongoDB.Driver**: Biblioteca oficial para integração com MongoDB
-- **CsvHelper**: Biblioteca para processamento de arquivos CSV
-- **Serilog**: Framework de logging estruturado
-- **Microsoft.Extensions.DependencyInjection**: Injeção de dependências
-- **Microsoft.Extensions.Configuration**: Gerenciamento de configurações
+- **.NET**: Framework base
+- **MongoDB.Driver**: Acesso ao MongoDB
+- **CsvHelper**: Processamento CSV
+- **Serilog**: Logging estruturado
+- **Microsoft.Extensions.DependencyInjection**: IoC
+- **Microsoft.Extensions.Configuration**: Configurações
