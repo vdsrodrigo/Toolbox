@@ -1,51 +1,52 @@
-﻿using System;
-using System.Collections.Generic;
-using ToolBox.Models;
+﻿using System.Globalization;
 using CsvHelper;
 using CsvHelper.Configuration;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using System.Globalization;
-using System.IO;
-using System.Threading.Tasks;
+using ToolBox.Models;
 
 namespace ToolBox.Services;
 
 public class CsvImportService
 {
-    private readonly MongoDbService _mongoDbService;
+    private readonly ILedgerRepository _ledgerRepository;
     private readonly ILogger<CsvImportService> _logger;
-    private readonly IConfiguration _configuration;
-    private int _batchSize;
+    private readonly int _batchSize;
     private readonly DateTime _defaultCreatedAt = DateTime.UtcNow;
 
     public CsvImportService(
-        MongoDbService mongoDbService,
+        ILedgerRepository ledgerRepository,
         ILogger<CsvImportService> logger,
         IConfiguration configuration)
     {
-        _mongoDbService = mongoDbService;
+        _ledgerRepository = ledgerRepository;
         _logger = logger;
-        _configuration = configuration;
-        _batchSize = _configuration.GetValue<int>("ImportSettings:BatchSize", 5000);
+        _batchSize = configuration.GetValue("BatchSize", 1000);
     }
 
     public async Task<ImportResult> ImportCsvToMongoAsync(string csvFilePath)
     {
         var startTime = DateTime.Now;
-        var importResult = new ImportResult();
+        var importResult = new ImportResult
+        {
+            TotalRecords = 0,
+            InsertedRecords = 0,
+            TotalBatches = 0,
+            FailedBatches = 0,
+            DurationMs = 0
+        };
 
         if (!File.Exists(csvFilePath))
         {
             _logger.LogError($"CSV file not found: {csvFilePath}");
-            throw new FileNotFoundException($"CSV file not found", csvFilePath);
+            throw new FileNotFoundException("CSV file not found", csvFilePath);
         }
 
         _logger.LogInformation($"Starting import from {csvFilePath}");
         _logger.LogInformation($"Batch size: {_batchSize}");
 
         // Create index for better performance
-        await _mongoDbService.CreateIndexIfNotExistsAsync();
+        await _ledgerRepository.CreateIndexIfNotExistsAsync();
 
         var config = new CsvConfiguration(CultureInfo.InvariantCulture)
         {
@@ -125,7 +126,7 @@ public class CsvImportService
     {
         try
         {
-            await _mongoDbService.InsertManyAsync(batch);
+            await _ledgerRepository.InsertManyAsync(batch);
             importResult.InsertedRecords += batch.Count;
             _logger.LogDebug($"Batch {batchCount} with {batch.Count} records inserted successfully");
         }
@@ -138,7 +139,7 @@ public class CsvImportService
         {
             batch.Clear();
         }
-        return batchCount;
+        return ++batchCount;
     }
 }
 
@@ -149,13 +150,4 @@ public sealed class CsvMemberMap : ClassMap<CsvMember>
         Map(m => m.LOYMEMBERID).Name("LOYMEMBERID");
         Map(m => m.MEMBERPEOMEMNUM).Name("MEMBERPEOMEMNUM");
     }
-}
-
-public class ImportResult
-{
-    public long TotalRecords { get; set; }
-    public long InsertedRecords { get; set; }
-    public long TotalBatches { get; set; }
-    public long FailedBatches { get; set; }
-    public double DurationMs { get; set; }
 }
