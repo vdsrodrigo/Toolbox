@@ -5,7 +5,6 @@ using Microsoft.Extensions.Options;
 using Serilog;
 using ToolBox.Services;
 using ILogger = Serilog.ILogger;
-
 namespace ToolBox.Configuration;
 
 public static class ApplicationSetup

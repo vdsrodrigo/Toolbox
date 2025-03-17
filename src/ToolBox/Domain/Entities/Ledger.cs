@@ -1,4 +1,3 @@
-using System;
 using ToolBox.Domain.Exceptions;
 
 namespace ToolBox.Domain.Entities;

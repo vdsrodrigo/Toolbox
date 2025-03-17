@@ -180,3 +180,35 @@ Sistema de logging estruturado com Serilog:
 - **Serilog**: Logging estruturado
 - **Microsoft.Extensions.DependencyInjection**: IoC
 - **Microsoft.Extensions.Configuration**: Configurações
+
+## 🧪 Testes
+
+O projeto inclui uma suíte completa de testes de unidade usando as melhores ferramentas do ecossistema .NET:
+
+### Frameworks e Ferramentas
+- **xUnit**: Framework principal de testes
+- **Moq**: Biblioteca de mocking
+- **FluentAssertions**: Asserções expressivas
+- **AutoFixture**: Geração automática de dados de teste
+
+### Estrutura de Testes
+```
+Tests/
+├── Domain/
+│   └── Entities/
+│       └── LedgerTests.cs      # Testes da entidade Ledger
+└── Services/
+    ├── CsvReaderServiceTests.cs # Testes do serviço de leitura
+    └── CsvImportServiceTests.cs # Testes do serviço de importação
+```
+
+### Cobertura de Testes
+- ✅ Testes de Unidade para Entidades de Domínio
+- ✅ Testes de Serviços com Mocking
+- ✅ Testes de Casos de Sucesso e Falha
+- ✅ Testes de Validações e Exceções
+
+### Executando os Testes
+```bash
+dotnet test
+```

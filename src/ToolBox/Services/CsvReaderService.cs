@@ -5,7 +5,6 @@ using ToolBox.Domain.Entities;
 using ToolBox.Models;
 
 namespace ToolBox.Services;
-
 public interface ICsvReaderService
 {
     IAsyncEnumerable<Ledger> ReadLedgersAsync(string filePath);

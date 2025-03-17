@@ -6,6 +6,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+        <UserSecretsId>bfc60328-566a-46ea-bfe5-7dbed3628973</UserSecretsId>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(OS)' == 'Unix'">
