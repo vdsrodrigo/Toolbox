@@ -1,8 +1,14 @@
-# 📊 ToolBox - CSV to MongoDB Ledger Importer 🚀
+# 📊 ToolBox - Utilidades para Processamento de Dados 🚀
 
 ## 📝 Descrição
 
-O ToolBox é uma aplicação de console desenvolvida em .NET que facilita a importação em massa de dados de membros de um arquivo CSV para uma coleção "ledgers" no MongoDB. A ferramenta foi projetada com foco em performance, confiabilidade e escalabilidade, implementando estratégias como processamento em lotes (batch processing) e tratamento adequado de erros.
+O ToolBox é uma aplicação de console desenvolvida em .NET que oferece diversas ferramentas de processamento de dados. Atualmente, inclui funcionalidades para:
+
+1. Importação em massa de dados de membros de um arquivo CSV para uma coleção "ledgers" no MongoDB
+2. Formatação e extração de campos específicos de arquivos JSONL
+
+A ferramenta foi projetada com foco em performance, confiabilidade e escalabilidade, implementando estratégias como processamento em lotes (batch processing) e tratamento adequado de erros.
+
 
 ## 🏗️ Estrutura do Projeto
 
@@ -10,28 +16,37 @@ O ToolBox é uma aplicação de console desenvolvida em .NET que facilita a impo
 ToolBox/
 ├── Domain/
 │   ├── Entities/
-│   │   └── Ledger.cs         # Entidade de domínio
+│   │   └── Ledger.cs                 # Entidade de domínio
 │   └── Exceptions/
-│       └── DomainException.cs # Exceções de domínio
+│       └── DomainException.cs        # Exceções de domínio
 ├── Models/
-│   ├── CsvMember.cs          # DTO para mapeamento do CSV
-│   └── ImportResult.cs       # Modelo para resultado da importação
+│   ├── CsvMember.cs                  # DTO para mapeamento do CSV
+│   └── ImportResult.cs               # Modelo para resultado da importação
 ├── Services/
-│   ├── CsvImportService.cs   # Serviço principal de importação
-│   ├── CsvReaderService.cs   # Serviço de leitura do CSV
-│   ├── MongoDbService.cs     # Implementação do repositório MongoDB
-│   └── ConsoleService.cs     # Serviço de apresentação no console
+│   ├── CsvImportService.cs           # Serviço de importação CSV
+│   ├── CsvReaderService.cs           # Serviço de leitura do CSV
+│   ├── JsonFormatterService.cs       # Serviço de formatação JSON
+│   ├── MongoDbService.cs             # Implementação do repositório MongoDB
+│   └── ConsoleService.cs             # Serviço de apresentação no console
 ├── Configuration/
-│   ├── ApplicationSetup.cs   # Configuração da aplicação
-│   └── MongoDbSettings.cs    # Configurações do MongoDB
-└── Program.cs                # Ponto de entrada da aplicação
+│   ├── ApplicationSetup.cs           # Configuração da aplicação
+│   └── MongoDbSettings.cs            # Configurações do MongoDB
+└── Program.cs                        # Ponto de entrada da aplicação
 ```
 
 ## ✨ Principais Funcionalidades
 
+### Importação CSV para MongoDB
 - 🔄 Importação em lotes (batch processing) para melhor performance
 - 📈 Criação automática de índice único no campo CPF
 - 📊 Relatório detalhado de estatísticas de importação
+
+### Formatação de Arquivos JSONL
+- 🔍 Extração de campos específicos de arquivos JSONL
+- 📊 Barra de progresso com estimativa de tempo restante
+- 📄 Geração de novo arquivo com prefixo "_novo"
+
+### Recursos Gerais
 - 📝 Logging estruturado com Serilog
 - ⚙️ Configuração flexível via appsettings.json
 - 🛡️ Tratamento robusto de erros e exceções
@@ -39,6 +54,8 @@ ToolBox/
 - 🔌 Arquitetura modular e extensível
 
 ## 🔍 Como Funciona
+
+### Importação CSV para MongoDB
 
 O sistema realiza a importação seguindo estas etapas:
 
@@ -48,6 +65,16 @@ O sistema realiza a importação seguindo estas etapas:
 4. **Mapeamento**: Converte registros CSV para entidades `Ledger`
 5. **Processamento**: Insere lotes via `ILedgerRepository`
 6. **Relatório**: Gera estatísticas via `ConsoleService`
+
+### Formatação de Arquivos JSONL
+
+O processo de formatação segue estas etapas:
+
+1. **Entrada**: O usuário especifica o caminho do arquivo JSONL e os campos a extrair
+2. **Preparação**: O sistema analisa o arquivo para determinar seu tamanho total
+3. **Processamento**: Cada linha é lida, processada e os campos selecionados são extraídos
+4. **Monitoramento**: Uma barra de progresso exibe o status, incluindo porcentagem concluída e tempo estimado restante
+5. **Saída**: Um novo arquivo é criado com o sufixo "_novo", contendo apenas os campos selecionados
 
 ## 📋 Modelos e Entidades
 
@@ -120,95 +147,30 @@ public record ImportResult
 
 ## 🚀 Como Usar
 
-### Uso Padrão
-```bash
-dotnet run
-```
-Importa o arquivo padrão `members_without_ledger.csv` da pasta da aplicação.
+### Menu Principal
+Ao iniciar a aplicação, um menu interativo será exibido com as seguintes opções:
 
-### Especificando Arquivo CSV
-```bash
-dotnet run -- /caminho/para/seu/arquivo.csv
-```
+### Importação CSV para MongoDB
+Selecione a opção 1 e siga as instruções para especificar o caminho do arquivo CSV.
+
+### Formatação de Arquivo JSONL
+Selecione a opção 2 e siga as instruções para:
+1. Especificar o caminho do arquivo JSONL
+2. Informar o nome do primeiro campo a extrair
+3. Informar o nome do segundo campo a extrair
+
+Uma barra de progresso será exibida mostrando o status da operação e o tempo estimado para conclusão. Ao finalizar, o caminho do novo arquivo será exibido.
 
 ## 📈 Design e Arquitetura
 
 A aplicação segue princípios modernos de design:
 
 - 🎯 **Domain-Driven Design (DDD)**
-  - Entidades ricas com comportamento encapsulado
-  - Exceções de domínio personalizadas
-  - Separação clara entre domínio e infraestrutura
+    - Entidades ricas com comportamento encapsulado
+    - Exceções de domínio personalizadas
 
-- 🔌 **SOLID**
-  - Single Responsibility Principle (classes coesas)
-  - Open/Closed Principle (interfaces extensíveis)
-  - Liskov Substitution (implementações intercambiáveis)
-  - Interface Segregation (interfaces específicas)
-  - Dependency Inversion (inversão de controle)
-
-- 🏗️ **Clean Architecture**
-  - Separação em camadas
-  - Dependências apontando para dentro
-  - Domínio independente de infraestrutura
-
-## 📊 Performance
-
-- ⚡ Processamento em lotes configurável
-- 🔍 Indexação otimizada
-- 🧵 Operações assíncronas
-- 📊 Métricas detalhadas de performance
-
-## 📝 Logs e Monitoramento
-
-Sistema de logging estruturado com Serilog:
-- 📄 Logs em arquivo com rotação
-- 🖥️ Logs em console
-- 🔍 Contexto enriquecido
-
-## 🔧 Tratamento de Erros
-
-- 🛡️ Exceções de domínio personalizadas
-- 📊 Contabilização de sucessos/falhas
-- 🔄 Resiliência a falhas parciais
-
-## 📚 Tecnologias Utilizadas
-
-- **.NET**: Framework base
-- **MongoDB.Driver**: Acesso ao MongoDB
-- **CsvHelper**: Processamento CSV
-- **Serilog**: Logging estruturado
-- **Microsoft.Extensions.DependencyInjection**: IoC
-- **Microsoft.Extensions.Configuration**: Configurações
-
-## 🧪 Testes
-
-O projeto inclui uma suíte completa de testes de unidade usando as melhores ferramentas do ecossistema .NET:
-
-### Frameworks e Ferramentas
-- **xUnit**: Framework principal de testes
-- **Moq**: Biblioteca de mocking
-- **FluentAssertions**: Asserções expressivas
-- **AutoFixture**: Geração automática de dados de teste
-
-### Estrutura de Testes
-```
-Tests/
-├── Domain/
-│   └── Entities/
-│       └── LedgerTests.cs      # Testes da entidade Ledger
-└── Services/
-    ├── CsvReaderServiceTests.cs # Testes do serviço de leitura
-    └── CsvImportServiceTests.cs # Testes do serviço de importação
-```
-
-### Cobertura de Testes
-- ✅ Testes de Unidade para Entidades de Domínio
-- ✅ Testes de Serviços com Mocking
-- ✅ Testes de Casos de Sucesso e Falha
-- ✅ Testes de Validações e Exceções
-
-### Executando os Testes
-```bash
-dotnet test
-```
+- 🔄 **Padrões de Design**
+    - Injeção de Dependência
+    - Repository Pattern
+    - Service Pattern
+    - Princípios SOLID
