@@ -32,7 +32,6 @@ public static class ApplicationSetup
         ConfigureOptions(services, configuration);
         RegisterServices(services);
         services.AddScoped<JsonFormatterService>();
-
         return services.BuildServiceProvider();
     }
 
