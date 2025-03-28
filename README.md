@@ -6,7 +6,8 @@ O ToolBox é uma aplicação de console desenvolvida em .NET que oferece diversa
 
 1. Importação em massa de dados de membros de um arquivo CSV para uma coleção "ledgers" no MongoDB
 2. Formatação e extração de campos específicos de arquivos JSONL
-3. Buscar e substituir texto facilmente em arquivos JSON (novo 🚩)
+3. Buscar e substituir texto facilmente em arquivos JSON
+4. Importação em massa de dados JSONL no Redis
 
 A ferramenta foi projetada com foco em performance, confiabilidade e escalabilidade, implementando estratégias como processamento em lotes (batch processing) e tratamento adequado de erros.
 
@@ -64,7 +65,6 @@ ToolBox/
 - ⚡ Publicação direta dos pares chave-valor no Redis
 - ✅ Informação detalhada sobre a quantidade de entradas publicadas
 - ⏱️ Mensuração clara do tempo gasto no processamento
-
 
 ### Recursos Gerais
 - 📝 Logging estruturado com Serilog

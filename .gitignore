@@ -1,7 +1,134 @@
+# Diretórios de build e output
 bin/
 obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Bb]uild/
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+
+# Arquivos de cache e temporários
+.vs/
+.vscode/
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.suo
+*.user
+*.userprefs
+*.usertasks
+*.userosscache
+*.sln.docstates
+*.sln.ide
+*.cache
+*.dll.refresh
+*.dotCover
+*.dotSettings.user
+.localhistory/
+*.log
+
+# Arquivos de pacotes e dependências
 /packages/
+*.nupkg
+# Ignora arquivos de package exceto packages.config
+!packages/repositories.config
+project.lock.json
+project.assets.json
+*.nuget.props
+*.nuget.targets
+
+# Arquivos específicos do Rider/JetBrains
+.idea/
+.idea_modules/
+*.sln.iml
 riderModule.iml
 /_ReSharper.Caches/
-/.idea/.idea.ToolBox/.idea/.name
-/.idea/.idea.ToolBox/.idea/dataSources.xml
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/dictionaries
+.idea/vcs.xml
+.idea/jsLibraryMappings.xml
+
+# Testes e cobertura
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.VisualState.xml
+TestResults.xml
+*.coverage
+*.coveragexml
+*_i.c
+*_p.c
+*_h.h
+*.ilk
+*.meta
+*.obj
+*.iobj
+*.pch
+*.pdb
+*.ipdb
+*.pgc
+*.pgd
+*.rsp
+*.sbr
+*.tlb
+*.tli
+*.tlh
+*.tmp
+*.tmp_proj
+*_wpftmp.csproj
+
+# Visual Studio e Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+.history/
+
+# SQL Server
+*.mdf
+*.ldf
+*.ndf
+
+# Logs e arquivos temporários
+**/logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Arquivos de banco de dados locais
+*.mdb
+*.sqlite
+*.sqlite3
+*.db
+
+# Arquivos OS específicos
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Arquivos de publicação
+**/publish/
+**/published/
+*.[Pp]ublish.xml
+*.publishsettings
+orleans.codegen.cs
+
+# Arquivos de ambiente e configuração
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+appsettings.*.json
+!appsettings.json
+!appsettings.Example.json
+
+# Ferramentas específicas
+node_modules/
+bower_components/
+wwwroot/dist/
+.sass-cache/
