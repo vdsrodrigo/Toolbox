@@ -1,21 +1,19 @@
-﻿FROM mcr.microsoft.com/dotnet/runtime:9.0 AS base
-USER $APP_UID
-WORKDIR /app
-
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
-ARG BUILD_CONFIGURATION=Release
+﻿FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
-COPY ["ToolBox.csproj", "./"]
-RUN dotnet restore "ToolBox.csproj"
+
+# Copiar arquivos de projeto e restaurar dependências
+COPY ["*.csproj", "./"]
+RUN dotnet restore
+
+# Copiar todo o código-fonte e compilar
 COPY . .
-WORKDIR "/src/"
-RUN dotnet build "ToolBox.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet build -c Release -o /app/build
+RUN dotnet publish -c Release -o /app/publish
 
-FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "ToolBox.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
-
-FROM base AS final
+# Imagem final
+FROM mcr.microsoft.com/dotnet/runtime:9.0 AS final
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=build /app/publish .
+
+# Argumento para comando de entrada
 ENTRYPOINT ["dotnet", "ToolBox.dll"]

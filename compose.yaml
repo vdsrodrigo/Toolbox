@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  # Serviço Redis
+  redis:
+    image: redis:alpine
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Aplicação Console .NET
+  toolbox-app:
+    image: toolbox-app:latest
+    container_name: toolbox-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      - DOTNET_ENVIRONMENT=Production
+      - Redis__ConnectionString=redis:6379
+      - Redis__InstanceName=toolbox
+    networks:
+      - app-network
+    volumes:
+      - ./data:/app/data  # Monte um volume para dados de entrada/saída se necessário
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+    driver: local
