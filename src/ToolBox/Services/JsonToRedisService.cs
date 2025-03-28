@@ -21,6 +21,7 @@ public class JsonToRedisService(IConnectionMultiplexer redis, RedisSettings redi
             throw new FileNotFoundException("Arquivo não encontrado.", filePath);
 
         int totalEntries = 0;
+        int batchSize = 5000; // Tamanho do lote - ajuste conforme necessário
 
         // Primeiro, contar linhas para definir o progresso total
         using var countStream = File.OpenRead(filePath);
@@ -48,25 +49,44 @@ public class JsonToRedisService(IConnectionMultiplexer redis, RedisSettings redi
         using var reader = new StreamReader(fileStream);
 
         string? line;
+        List<KeyValuePair<RedisKey, RedisValue>> batch = new(batchSize);
+        int processedLines = 0;
+
         while ((line = await reader.ReadLineAsync()) != null)
         {
+            processedLines++;
             using var doc = JsonDocument.Parse(line);
 
             if (!doc.RootElement.TryGetProperty(keyField, out var keyElement) ||
                 !doc.RootElement.TryGetProperty(valueField, out var valueElement))
             {
-                progressBar.Tick($"Linha inválida, ignorando...");
+                // Atualizamos a barra de progresso mesmo para linhas inválidas
+                progressBar.Tick($"Linha inválida, ignorando... ({processedLines} de {totalLines})");
                 continue; // Ignorar caso algum campo não exista nesta linha
             }
 
             var key = keyElement.ToString();
             var value = valueElement.ToString();
 
-            // Usando a convenção InstanceName para a chave:
-            await _redisDb.StringSetAsync($"{_instanceName}:{key}", value);
+            // Adicionar ao lote
+            batch.Add(new KeyValuePair<RedisKey, RedisValue>($"{_instanceName}:{key}", value));
             totalEntries++;
 
-            progressBar.Tick($"Importado {totalEntries} de {totalLines} registros.");
+            // Atualizamos a barra de progresso para cada linha processada
+            progressBar.Tick($"Processando... ({processedLines} de {totalLines})");
+
+            // Quando o lote estiver completo, enviar para o Redis
+            if (batch.Count >= batchSize)
+            {
+                await _redisDb.StringSetAsync(batch.ToArray());
+                batch.Clear();
+            }
+        }
+
+        // Processar o último lote (caso exista)
+        if (batch.Count > 0)
+        {
+            await _redisDb.StringSetAsync(batch.ToArray());
         }
 
         return totalEntries;
