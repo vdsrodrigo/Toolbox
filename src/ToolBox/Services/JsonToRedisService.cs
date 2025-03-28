@@ -1,6 +1,7 @@
 using StackExchange.Redis;
 using System.Text.Json;
-using ShellProgressBar;
+using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 using ToolBox.Configuration;
 
 namespace ToolBox.Services;
@@ -10,85 +11,89 @@ public interface IJsonToRedisService
     Task<int> ExecuteAsync(string filePath, string keyField, string valueField);
 }
 
-public class JsonToRedisService(IConnectionMultiplexer redis, RedisSettings redisSettings) : IJsonToRedisService
+public class JsonToRedisService : IJsonToRedisService
 {
-    private readonly IDatabase _redisDb = redis.GetDatabase();
-    private readonly string _instanceName = redisSettings.InstanceName;
+    private readonly IConnectionMultiplexer _redis;
+    private readonly IProgressBarService _progressBarService;
+    private readonly ILogger<JsonToRedisService> _logger;
+
+    public JsonToRedisService(
+        IConnectionMultiplexer redis,
+        IProgressBarService progressBarService,
+        ILogger<JsonToRedisService> logger)
+    {
+        _redis = redis;
+        _progressBarService = progressBarService;
+        _logger = logger;
+    }
 
     public async Task<int> ExecuteAsync(string filePath, string keyField, string valueField)
     {
-        if (!File.Exists(filePath))
-            throw new FileNotFoundException("Arquivo não encontrado.", filePath);
+        var db = _redis.GetDatabase();
+        var totalLines = File.ReadLines(filePath).Count();
+        var batchSize = 1000;
+        var totalBatches = (int)Math.Ceiling(totalLines / (double)batchSize);
+        var currentBatch = 0;
+        var totalPublished = 0;
 
-        int totalEntries = 0;
-        int batchSize = 5000; // Tamanho do lote - ajuste conforme necessário
+        _progressBarService.InitializeProgressBar(totalBatches, "Processando arquivo JSONL");
 
-        // Primeiro, contar linhas para definir o progresso total
-        using var countStream = File.OpenRead(filePath);
-        using var lineCounter = new StreamReader(countStream);
-        var totalLines = 0;
-        while (await lineCounter.ReadLineAsync() != null)
-            totalLines++;
-
-        // Configuração visual da progress bar
-        var options = new ProgressBarOptions
+        try
         {
-            ProgressCharacter = '─',
-            ForegroundColor = ConsoleColor.Cyan,
-            ForegroundColorDone = ConsoleColor.Green,
-            BackgroundColor = ConsoleColor.DarkGray,
-            BackgroundCharacter = '─',
-            CollapseWhenFinished = false,
-            DisplayTimeInRealTime = true
-        };
+            using var stream = File.OpenRead(filePath);
+            using var reader = new StreamReader(stream);
+            var batch = new List<(string Key, string Value)>();
 
-        using var progressBar = new ProgressBar(totalLines, "Importando dados JSON para Redis ✅", options);
-
-        // Iniciar leitura real agora com barra de progresso
-        await using var fileStream = File.OpenRead(filePath);
-        using var reader = new StreamReader(fileStream);
-
-        string? line;
-        List<KeyValuePair<RedisKey, RedisValue>> batch = new(batchSize);
-        int processedLines = 0;
-
-        while ((line = await reader.ReadLineAsync()) != null)
-        {
-            processedLines++;
-            using var doc = JsonDocument.Parse(line);
-
-            if (!doc.RootElement.TryGetProperty(keyField, out var keyElement) ||
-                !doc.RootElement.TryGetProperty(valueField, out var valueElement))
+            while (!reader.EndOfStream)
             {
-                // Atualizamos a barra de progresso mesmo para linhas inválidas
-                progressBar.Tick($"Linha inválida, ignorando... ({processedLines} de {totalLines})");
-                continue; // Ignorar caso algum campo não exista nesta linha
+                var line = await reader.ReadLineAsync();
+                if (string.IsNullOrEmpty(line)) continue;
+
+                try
+                {
+                    var jsonDoc = JsonDocument.Parse(line);
+                    var key = jsonDoc.RootElement.GetProperty(keyField).GetString();
+                    var value = jsonDoc.RootElement.GetProperty(valueField).GetString();
+
+                    if (key != null && value != null)
+                    {
+                        batch.Add((key, value));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Erro ao processar linha: {Line}", line);
+                }
+
+                if (batch.Count >= batchSize)
+                {
+                    await PublishBatchAsync(db, batch);
+                    totalPublished += batch.Count;
+                    batch.Clear();
+                    currentBatch++;
+                    _progressBarService.UpdateProgress(currentBatch, $"Processado {totalPublished:N0} registros");
+                }
             }
 
-            var key = keyElement.ToString();
-            var value = valueElement.ToString();
-
-            // Adicionar ao lote
-            batch.Add(new KeyValuePair<RedisKey, RedisValue>($"{_instanceName}:{key}", value));
-            totalEntries++;
-
-            // Atualizamos a barra de progresso para cada linha processada
-            progressBar.Tick($"Processando... ({processedLines} de {totalLines})");
-
-            // Quando o lote estiver completo, enviar para o Redis
-            if (batch.Count >= batchSize)
+            if (batch.Any())
             {
-                await _redisDb.StringSetAsync(batch.ToArray());
-                batch.Clear();
+                await PublishBatchAsync(db, batch);
+                totalPublished += batch.Count;
+                currentBatch++;
+                _progressBarService.UpdateProgress(currentBatch, $"Processado {totalPublished:N0} registros");
             }
-        }
 
-        // Processar o último lote (caso exista)
-        if (batch.Count > 0)
+            return totalPublished;
+        }
+        finally
         {
-            await _redisDb.StringSetAsync(batch.ToArray());
+            _progressBarService.Dispose();
         }
+    }
 
-        return totalEntries;
+    private async Task PublishBatchAsync(IDatabase db, List<(string Key, string Value)> batch)
+    {
+        var tasks = batch.Select(item => db.StringSetAsync(item.Key, item.Value));
+        await Task.WhenAll(tasks);
     }
 }

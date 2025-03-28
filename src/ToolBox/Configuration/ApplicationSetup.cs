@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Serilog;
 using StackExchange.Redis;
+using MongoDB.Driver;
 using ToolBox.Services;
 using ILogger = Serilog.ILogger;
 
@@ -14,8 +15,10 @@ public static class ApplicationSetup
     public static IConfiguration CreateConfiguration()
     {
         return new ConfigurationBuilder()
-            .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
+            .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+            .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development"}.json", optional: true)
+            .AddEnvironmentVariables()
             .Build();
     }
 
@@ -26,7 +29,7 @@ public static class ApplicationSetup
             .CreateLogger();
     }
 
-    public static ServiceProvider ConfigureServices(IConfiguration configuration)
+    public static IServiceProvider ConfigureServices(IConfiguration configuration)
     {
         var services = new ServiceCollection();
 
@@ -48,6 +51,24 @@ public static class ApplicationSetup
         
         services.AddScoped<IJsonToRedisService, JsonToRedisService>();
         
+        // Configurar MongoDB
+        var mongoSettings = configuration.GetSection("MongoDB").Get<MongoDbSettings>();
+        var mongoClient = new MongoClient(mongoSettings.ConnectionString);
+        var mongoDatabase = mongoClient.GetDatabase(mongoSettings.DatabaseName);
+        services.AddSingleton<IMongoDatabase>(mongoDatabase);
+
+        // Registra os serviços
+        services.AddSingleton<IConsoleService, ConsoleService>();
+        services.AddSingleton<IProgressBarService, ProgressBarService>();
+        services.AddSingleton<CsvImportService>();
+        services.AddSingleton<JsonFormatterService>();
+        services.AddSingleton<ITextReplacementService, TextReplacementService>();
+        services.AddSingleton<IJsonToRedisService, JsonToRedisService>();
+
+        // Registra as configurações
+        services.Configure<MongoDbSettings>(configuration.GetSection("MongoDb"));
+        services.Configure<RedisSettings>(configuration.GetSection("Redis"));
+
         return services.BuildServiceProvider();
     }
 

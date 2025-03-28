@@ -18,7 +18,7 @@ try
         Console.WriteLine("\nEscolha uma opção:");
         Console.WriteLine("1 - Importar CSV para MongoDB");
         Console.WriteLine("2 - Formatar arquivo JSON");
-        Console.WriteLine("3. Substituir Texto em Arquivo");
+        Console.WriteLine("3 - Substituir Texto em Arquivo");
         Console.WriteLine("4 - Ler JSONL e publicar dados no Redis");
         Console.WriteLine("0 - Sair");
         Console.Write("\nSua escolha: ");
@@ -31,16 +31,16 @@ try
                     exit = true;
                     break;
                 case 1:
-                    await ImportCsvToMongo(serviceProvider);
+                    await consoleService.ImportCsvToMongoAsync(serviceProvider);
                     break;
                 case 2:
-                    await FormatJsonFile(serviceProvider);
+                    await consoleService.FormatJsonFileAsync(serviceProvider);
                     break;
                 case 3:
-                    await ReplaceTextInFile(serviceProvider);
+                    await consoleService.ReplaceTextInFileAsync(serviceProvider);
                     break;
                 case 4:
-                    await JsonToRedis(serviceProvider);
+                    await consoleService.JsonToRedisAsync(serviceProvider);
                     break;
                 default:
                     Console.WriteLine("\nOpção inválida. Tente novamente.");
@@ -68,220 +68,4 @@ catch (Exception ex)
 finally
 {
     Log.CloseAndFlush();
-}
-async Task ImportCsvToMongo(ServiceProvider serviceProvider)
-{
-    var consoleService = serviceProvider.GetRequiredService<ConsoleService>();
-
-    Console.WriteLine("\nImportação de CSV para MongoDB");
-    Console.WriteLine("---------------------------------");
-
-    var defaultCsvFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "members_without_ledger.csv");
-    Console.WriteLine($"Arquivo CSV padrão: {defaultCsvFilePath}");
-    Console.Write("Digite o caminho do arquivo CSV (ou pressione Enter para usar o padrão): ");
-
-    var input = Console.ReadLine();
-    var csvFilePath = string.IsNullOrWhiteSpace(input) ? defaultCsvFilePath : input;
-
-    consoleService.DisplayInputFile(csvFilePath);
-
-    try
-    {
-        var importService = serviceProvider.GetRequiredService<CsvImportService>();
-        var result = await importService.ImportCsvToMongoAsync(csvFilePath);
-
-        consoleService.DisplayImportResults(result);
-    }
-    catch (Exception ex)
-    {
-        consoleService.DisplayError($"Falha na importação: {ex.Message}");
-        Log.Error(ex, "Erro ao importar CSV para MongoDB");
-    }
-}
-
-async Task FormatJsonFile(ServiceProvider serviceProvider)
-{
-    var consoleService = serviceProvider.GetRequiredService<ConsoleService>();
-
-    Console.WriteLine("\nFormatação de arquivo JSONL");
-    Console.WriteLine("---------------------------------");
-
-    Console.Write("Digite o caminho do arquivo JSONL: ");
-    var jsonlFilePath = Console.ReadLine()?.Trim();
-
-    if (string.IsNullOrEmpty(jsonlFilePath))
-    {
-        consoleService.DisplayError("Caminho do arquivo não fornecido.");
-        return;
-    }
-
-    if (!File.Exists(jsonlFilePath))
-    {
-        consoleService.DisplayError($"Arquivo não encontrado: {jsonlFilePath}");
-        return;
-    }
-
-    Console.WriteLine("\nDigite o nome do primeiro campo a ser extraído:");
-    var field1 = Console.ReadLine()?.Trim();
-
-    Console.WriteLine("Digite o nome do segundo campo a ser extraído:");
-    var field2 = Console.ReadLine()?.Trim();
-
-    if (string.IsNullOrEmpty(field1) && string.IsNullOrEmpty(field2))
-    {
-        consoleService.DisplayError("É necessário pelo menos um campo para extração.");
-        return;
-    }
-
-    var fieldsToExtract = new List<string>();
-    if (!string.IsNullOrEmpty(field1)) fieldsToExtract.Add(field1);
-    if (!string.IsNullOrEmpty(field2)) fieldsToExtract.Add(field2);
-
-    try
-    {
-        Console.WriteLine("\nIniciando processamento do arquivo...");
-
-        // Configuração da barra de progresso
-        int consoleWidth = Console.WindowWidth - 5;
-        int barWidth = Math.Max(10, consoleWidth - 50); // Garantir uma largura mínima
-
-        var progress = new Progress<(int Processed, int Total, TimeSpan ElapsedTime)>(data =>
-        {
-            double percentage = (double)data.Processed / data.Total;
-            int completedWidth = (int)(barWidth * percentage);
-
-            // Calcula tempo estimado restante
-            TimeSpan estimatedTotalTime = TimeSpan.FromTicks((long)(data.ElapsedTime.Ticks / percentage));
-            TimeSpan remainingTime = estimatedTotalTime - data.ElapsedTime;
-
-            // Limpa a linha atual
-            Console.Write("\r" + new string(' ', consoleWidth));
-            Console.Write("\r");
-
-            // Desenha a barra de progresso
-            Console.Write("[");
-            Console.Write(new string('#', completedWidth));
-            Console.Write(new string(' ', barWidth - completedWidth));
-            Console.Write("] ");
-
-            // Escreve informações de progresso
-            Console.Write($"{data.Processed:N0}/{data.Total:N0} ({percentage:P1}) ");
-
-            // Tempo estimado restante
-            if (data.Processed > 0)
-            {
-                Console.Write($"Tempo restante: {FormatTimeSpan(remainingTime)}");
-            }
-            else
-            {
-                Console.Write("Calculando tempo restante...");
-            }
-        });
-
-        var jsonFormatterService = serviceProvider.GetRequiredService<JsonFormatterService>();
-        var outputFilePath =
-            await jsonFormatterService.ExtractFieldsToNewFileAsync(jsonlFilePath, fieldsToExtract.ToArray(), progress);
-
-        Console.WriteLine("\n\nExtração concluída com sucesso!");
-        Console.WriteLine($"Arquivo de saída: {outputFilePath}");
-    }
-    catch (Exception ex)
-    {
-        consoleService.DisplayError($"Falha na formatação do arquivo: {ex.Message}");
-        Log.Error(ex, "Erro ao formatar arquivo JSONL");
-    }
-}
-
-
-async Task ReplaceTextInFile(ServiceProvider serviceProvider)
-{
-    try
-    {
-        Console.WriteLine("\n=== Substituir Texto em Arquivo ===");
-        Console.Write("Digite o caminho do arquivo: ");
-        var filePath = Console.ReadLine();
-
-        if (string.IsNullOrEmpty(filePath))
-        {
-            Console.WriteLine("Caminho do arquivo não pode ser vazio!");
-            return;
-        }
-
-        Console.Write("Digite o texto a ser substituído: ");
-        var searchText = Console.ReadLine();
-
-        if (string.IsNullOrEmpty(searchText))
-        {
-            Console.WriteLine("Texto a ser substituído não pode ser vazio!");
-            return;
-        }
-
-        Console.Write("Digite o novo texto (pressione Enter para remover o texto): ");
-        var replacementText = Console.ReadLine();
-
-        var textReplacementService = serviceProvider.GetRequiredService<ITextReplacementService>();
-        var newFilePath = await textReplacementService.ReplaceTextInFileAsync(filePath, searchText, replacementText);
-
-        Console.WriteLine($"\nArquivo processado com sucesso!");
-        Console.WriteLine($"Novo arquivo salvo em: {newFilePath}");
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"\nErro ao processar o arquivo: {ex.Message}");
-    }
-}
-
-async Task JsonToRedis(IServiceProvider serviceProvider)
-{
-    Console.WriteLine("Informe o caminho do arquivo JSONL a ser processado:");
-    var filePath = Console.ReadLine();
-    if (string.IsNullOrWhiteSpace(filePath))
-    {
-        Console.WriteLine("Caminho não pode ser vazio.");
-        return;
-    }
-
-    Console.WriteLine("Digite o nome do campo a ser usado como chave no Redis:");
-    var keyField = Console.ReadLine();
-    if (string.IsNullOrWhiteSpace(keyField))
-    {
-        Console.WriteLine("O campo-chave não pode ser vazio.");
-        return;
-    }
-
-    Console.WriteLine("Digite o nome do campo a ser usado como valor no Redis:");
-    var valueField = Console.ReadLine();
-    if (string.IsNullOrWhiteSpace(valueField))
-    {
-        Console.WriteLine("O campo-valor não pode ser vazio.");
-        return;
-    }
-
-    Console.WriteLine("\nProcessando e publicando dados para o Redis...");
-    var startTime = DateTime.Now;
-
-    try
-    {
-        var redisService = serviceProvider.GetRequiredService<IJsonToRedisService>();
-        var totalPublished = await redisService.ExecuteAsync(filePath, keyField, valueField);
-
-        Console.WriteLine("\n✅ Publicação concluída com sucesso.");
-        Console.WriteLine($"📌 Total de entradas publicadas no Redis: {totalPublished}");
-        Console.WriteLine($"⏱️ Tempo total gasto: {DateTime.Now - startTime}");
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"❌ Erro ao publicar no Redis: {ex.Message}");
-    }
-}
-
-// Método auxiliar para formatar o TimeSpan de forma amigável
-string FormatTimeSpan(TimeSpan timeSpan)
-{
-    if (timeSpan.TotalHours >= 1)
-    {
-        return $"{timeSpan.Hours}h {timeSpan.Minutes}m {timeSpan.Seconds}s";
-    }
-
-    return timeSpan.TotalMinutes >= 1 ? $"{timeSpan.Minutes}m {timeSpan.Seconds}s" : $"{timeSpan.Seconds}s";
 }

@@ -1,96 +1,107 @@
-﻿using CsvHelper.Configuration;
-using Microsoft.Extensions.Configuration;
+﻿using CsvHelper;
+using CsvHelper.Configuration;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
-using ToolBox.Domain.Entities;
+using MongoDB.Driver;
+using System.Globalization;
+using ToolBox.Configuration;
 using ToolBox.Models;
+using ToolBox.Domain.Entities;
 
 namespace ToolBox.Services;
 
-public class CsvImportService(
-    ILedgerRepository ledgerRepository,
-    ICsvReaderService csvReader,
-    ILogger<CsvImportService> logger,
-    IConfiguration configuration)
+public class CsvImportService
 {
-    private readonly int _batchSize = configuration.GetValue("BatchSize", 5000);
+    private readonly IMongoCollection<Ledger> _collection;
+    private readonly IProgressBarService _progressBarService;
+    private readonly ILogger<CsvImportService> _logger;
+
+    public CsvImportService(
+        IMongoDatabase database,
+        IOptions<MongoDbSettings> mongoDbSettings,
+        IProgressBarService progressBarService,
+        ILogger<CsvImportService> logger)
+    {
+        _collection = database.GetCollection<Ledger>(mongoDbSettings.Value.CollectionName);
+        _progressBarService = progressBarService;
+        _logger = logger;
+    }
 
     public async Task<ImportResult> ImportCsvToMongoAsync(string csvFilePath)
     {
-        var startTime = DateTime.Now;
-        var importResult = new ImportResult
-        {
-            TotalRecords = 0,
-            InsertedRecords = 0,
-            TotalBatches = 0,
-            FailedBatches = 0,
-            DurationMs = 0
-        };
-
-        logger.LogInformation($"Starting import from {csvFilePath}");
-        logger.LogInformation($"Batch size: {_batchSize}");
-
-        await ledgerRepository.CreateIndexIfNotExistsAsync();
-
+        var result = new ImportResult();
+        var batchSize = 1000;
         var batch = new List<Ledger>();
-        long recordCount = 0;
-        long batchCount = 0;
+        var totalLines = File.ReadLines(csvFilePath).Count();
+        var totalBatches = (int)Math.Ceiling(totalLines / (double)batchSize);
+        var currentBatch = 0;
+        var startTime = DateTime.Now;
 
-        await foreach (var ledger in csvReader.ReadLedgersAsync(csvFilePath))
-        {
-            recordCount++;
-            batch.Add(ledger);
+        _progressBarService.InitializeProgressBar(totalBatches, "Importando CSV para MongoDB");
 
-            if (batch.Count >= _batchSize)
-            {
-                batchCount = await ProcessBatch(batch, batchCount, importResult);
-            }
-
-            if (recordCount % (_batchSize * 10) == 0)
-            {
-                logger.LogInformation($"Processed {recordCount:N0} records so far");
-            }
-        }
-
-        if (batch.Count > 0)
-        {
-            batchCount = await ProcessBatch(batch, batchCount, importResult);
-        }
-
-        importResult.TotalRecords = recordCount;
-        importResult.TotalBatches = batchCount;
-        importResult.DurationMs = (DateTime.Now - startTime).TotalMilliseconds;
-
-        LogImportResults(importResult);
-
-        return importResult;
-    }
-
-    private async Task<long> ProcessBatch(List<Ledger> batch, long batchCount, ImportResult importResult)
-    {
         try
         {
-            await ledgerRepository.InsertManyAsync(batch);
-            importResult.InsertedRecords += batch.Count;
-            logger.LogDebug($"Batch {batchCount} with {batch.Count} records inserted successfully");
-        }
-        catch (Exception ex)
-        {
-            importResult.FailedBatches++;
-            logger.LogError(ex, $"Failed to insert batch {batchCount}");
+            using var reader = new StreamReader(csvFilePath);
+            var config = new CsvConfiguration(CultureInfo.InvariantCulture)
+            {
+                HasHeaderRecord = true,
+                TrimOptions = TrimOptions.Trim,
+                HeaderValidated = null,
+                PrepareHeaderForMatch = args => args.Header.ToUpper()
+            };
+
+            using var csv = new CsvReader(reader, config);
+            csv.Context.RegisterClassMap<CsvMemberMap>();
+
+            await foreach (var record in csv.GetRecordsAsync<CsvMember>())
+            {
+                var ledger = Ledger.Create(record.MemberPeoMemNum, DateTime.UtcNow);
+                batch.Add(ledger);
+                result.TotalRecords++;
+
+                if (batch.Count >= batchSize)
+                {
+                    await InsertBatchAsync(batch, result);
+                    result.InsertedRecords += batch.Count;
+                    result.TotalBatches++;
+                    batch.Clear();
+                    currentBatch++;
+                    _progressBarService.UpdateProgress(currentBatch, $"Processado {result.TotalRecords:N0} registros");
+                }
+            }
+
+            if (batch.Any())
+            {
+                await InsertBatchAsync(batch, result);
+                result.InsertedRecords += batch.Count;
+                result.TotalBatches++;
+                currentBatch++;
+                _progressBarService.UpdateProgress(currentBatch, $"Processado {result.TotalRecords:N0} registros");
+            }
+
+            result.DurationInSeconds = (DateTime.Now - startTime).TotalSeconds;
+            result.RecordsPerSecond = result.TotalRecords / result.DurationInSeconds;
+
+            return result;
         }
         finally
         {
-            batch.Clear();
+            _progressBarService.Dispose();
         }
-        return ++batchCount;
     }
 
-    private void LogImportResults(ImportResult result)
+    private async Task InsertBatchAsync(List<Ledger> batch, ImportResult result)
     {
-        logger.LogInformation($"Import completed in {result.DurationMs / 1000:N2} seconds");
-        logger.LogInformation($"Total records processed: {result.TotalRecords:N0}");
-        logger.LogInformation($"Total records imported: {result.InsertedRecords:N0}");
-        logger.LogInformation($"Total batches: {result.TotalBatches:N0}");
+        try
+        {
+            await _collection.InsertManyAsync(batch);
+        }
+        catch (Exception ex)
+        {
+            result.FailedBatches++;
+            _logger.LogError(ex, "Erro ao inserir lote de {Count} registros", batch.Count);
+            throw;
+        }
     }
 }
 

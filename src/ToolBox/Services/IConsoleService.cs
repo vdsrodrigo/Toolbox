@@ -2,7 +2,9 @@ namespace ToolBox.Services;
 
 public interface IConsoleService
 {
-    // ... métodos existentes
-    
-    void UpdateProgress(double percentage, int matchesFound, int linesProcessed, TimeSpan remainingTime);
+    // Métodos para gerenciar o fluxo de interação
+    Task ImportCsvToMongoAsync(IServiceProvider serviceProvider);
+    Task FormatJsonFileAsync(IServiceProvider serviceProvider);
+    Task ReplaceTextInFileAsync(IServiceProvider serviceProvider);
+    Task JsonToRedisAsync(IServiceProvider serviceProvider);
 }
