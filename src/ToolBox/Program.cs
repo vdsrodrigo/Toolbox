@@ -18,6 +18,8 @@ try
         Console.WriteLine("\nEscolha uma opção:");
         Console.WriteLine("1 - Importar CSV para MongoDB");
         Console.WriteLine("2 - Formatar arquivo JSON");
+        Console.WriteLine("3. Substituir Texto em Arquivo");
+        Console.WriteLine("4 - Ler JSONL e publicar dados no Redis");
         Console.WriteLine("0 - Sair");
         Console.Write("\nSua escolha: ");
 
@@ -33,6 +35,12 @@ try
                     break;
                 case 2:
                     await FormatJsonFile(serviceProvider);
+                    break;
+                case 3:
+                    await ReplaceTextInFile(serviceProvider);
+                    break;
+                case 4:
+                    await JsonToRedis(serviceProvider);
                     break;
                 default:
                     Console.WriteLine("\nOpção inválida. Tente novamente.");
@@ -61,7 +69,6 @@ finally
 {
     Log.CloseAndFlush();
 }
-
 async Task ImportCsvToMongo(ServiceProvider serviceProvider)
 {
     var consoleService = serviceProvider.GetRequiredService<ConsoleService>();
@@ -182,6 +189,89 @@ async Task FormatJsonFile(ServiceProvider serviceProvider)
     {
         consoleService.DisplayError($"Falha na formatação do arquivo: {ex.Message}");
         Log.Error(ex, "Erro ao formatar arquivo JSONL");
+    }
+}
+
+
+async Task ReplaceTextInFile(ServiceProvider serviceProvider)
+{
+    try
+    {
+        Console.WriteLine("\n=== Substituir Texto em Arquivo ===");
+        Console.Write("Digite o caminho do arquivo: ");
+        var filePath = Console.ReadLine();
+
+        if (string.IsNullOrEmpty(filePath))
+        {
+            Console.WriteLine("Caminho do arquivo não pode ser vazio!");
+            return;
+        }
+
+        Console.Write("Digite o texto a ser substituído: ");
+        var searchText = Console.ReadLine();
+
+        if (string.IsNullOrEmpty(searchText))
+        {
+            Console.WriteLine("Texto a ser substituído não pode ser vazio!");
+            return;
+        }
+
+        Console.Write("Digite o novo texto (pressione Enter para remover o texto): ");
+        var replacementText = Console.ReadLine();
+
+        var textReplacementService = serviceProvider.GetRequiredService<ITextReplacementService>();
+        var newFilePath = await textReplacementService.ReplaceTextInFileAsync(filePath, searchText, replacementText);
+
+        Console.WriteLine($"\nArquivo processado com sucesso!");
+        Console.WriteLine($"Novo arquivo salvo em: {newFilePath}");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"\nErro ao processar o arquivo: {ex.Message}");
+    }
+}
+
+async Task JsonToRedis(IServiceProvider serviceProvider)
+{
+    Console.WriteLine("Informe o caminho do arquivo JSONL a ser processado:");
+    var filePath = Console.ReadLine();
+    if (string.IsNullOrWhiteSpace(filePath))
+    {
+        Console.WriteLine("Caminho não pode ser vazio.");
+        return;
+    }
+
+    Console.WriteLine("Digite o nome do campo a ser usado como chave no Redis:");
+    var keyField = Console.ReadLine();
+    if (string.IsNullOrWhiteSpace(keyField))
+    {
+        Console.WriteLine("O campo-chave não pode ser vazio.");
+        return;
+    }
+
+    Console.WriteLine("Digite o nome do campo a ser usado como valor no Redis:");
+    var valueField = Console.ReadLine();
+    if (string.IsNullOrWhiteSpace(valueField))
+    {
+        Console.WriteLine("O campo-valor não pode ser vazio.");
+        return;
+    }
+
+    Console.WriteLine("\nProcessando e publicando dados para o Redis...");
+    var startTime = DateTime.Now;
+
+    try
+    {
+        var redisService = serviceProvider.GetRequiredService<IJsonToRedisService>();
+        var totalPublished = await redisService.ExecuteAsync(filePath, keyField, valueField);
+
+        Console.WriteLine("\n✅ Publicação concluída com sucesso.");
+        Console.WriteLine($"📌 Total de entradas publicadas no Redis: {totalPublished}");
+        Console.WriteLine($"⏱️ Tempo total gasto: {DateTime.Now - startTime}");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Erro ao publicar no Redis: {ex.Message}");
     }
 }
 

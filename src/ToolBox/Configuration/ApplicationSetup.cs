@@ -3,8 +3,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Serilog;
+using StackExchange.Redis;
 using ToolBox.Services;
 using ILogger = Serilog.ILogger;
+
 namespace ToolBox.Configuration;
 
 public static class ApplicationSetup
@@ -32,6 +34,20 @@ public static class ApplicationSetup
         ConfigureOptions(services, configuration);
         RegisterServices(services);
         services.AddScoped<JsonFormatterService>();
+        services.AddScoped<ITextReplacementService, TextReplacementService>();
+
+        // Obtenha as configurações do Redis
+        var redisConnectionString = configuration["Redis:ConnectionString"];
+        var redisInstanceName = configuration["Redis:InstanceName"];
+
+        // Registrar o ConnectionMultiplexer com singleton
+        services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(redisConnectionString));
+
+        // Registrar o InstanceName diretamente na DI:
+        services.AddSingleton(new RedisSettings(redisInstanceName));
+        
+        services.AddScoped<IJsonToRedisService, JsonToRedisService>();
+        
         return services.BuildServiceProvider();
     }
 
