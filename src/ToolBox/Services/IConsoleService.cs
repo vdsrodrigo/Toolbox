@@ -7,4 +7,10 @@ public interface IConsoleService
     Task FormatJsonFileAsync(IServiceProvider serviceProvider);
     Task ReplaceTextInFileAsync(IServiceProvider serviceProvider);
     Task JsonToRedisAsync(IServiceProvider serviceProvider);
+    Task ProcessCsvImportAsync();
+    Task ProcessJsonToRedisAsync();
+    Task ProcessJsonFormatterAsync();
+    Task ProcessSqlFileAsync();
+    void DisplayHeader();
+    Task ProcessOptionAsync(int option);
 }

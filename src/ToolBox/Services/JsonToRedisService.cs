@@ -1,15 +1,8 @@
 using StackExchange.Redis;
 using System.Text.Json;
-using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
-using ToolBox.Configuration;
 
 namespace ToolBox.Services;
-
-public interface IJsonToRedisService
-{
-    Task<int> ExecuteAsync(string filePath, string keyField, string valueField);
-}
 
 public class JsonToRedisService : IJsonToRedisService
 {

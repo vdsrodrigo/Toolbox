@@ -3,10 +3,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Serilog;
-using StackExchange.Redis;
 using MongoDB.Driver;
 using ToolBox.Services;
 using ILogger = Serilog.ILogger;
+using StackExchange.Redis;
 
 namespace ToolBox.Configuration;
 
@@ -29,45 +29,51 @@ public static class ApplicationSetup
             .CreateLogger();
     }
 
-    public static IServiceProvider ConfigureServices(IConfiguration configuration)
+    public static IServiceProvider ConfigureServices()
     {
         var services = new ServiceCollection();
 
-        ConfigureLogging(services);
-        ConfigureOptions(services, configuration);
-        RegisterServices(services);
-        services.AddScoped<JsonFormatterService>();
-        services.AddScoped<ITextReplacementService, TextReplacementService>();
+        // Configura o logging
+        services.AddLogging(builder =>
+        {
+            builder.AddConsole();
+            builder.AddDebug();
+        });
 
-        // Obtenha as configurações do Redis
-        var redisConnectionString = configuration["Redis:ConnectionString"];
-        var redisInstanceName = configuration["Redis:InstanceName"];
+        // Configura as configurações
+        var configuration = CreateConfiguration();
+        services.AddSingleton<IConfiguration>(configuration);
 
-        // Registrar o ConnectionMultiplexer com singleton
-        services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(redisConnectionString));
+        // Configura o MongoDB
+        var mongoDbSettings = new MongoDbSettings();
+        configuration.GetSection("MongoDB").Bind(mongoDbSettings);
+        mongoDbSettings.Validate();
 
-        // Registrar o InstanceName diretamente na DI:
-        services.AddSingleton(new RedisSettings(redisInstanceName));
-        
-        services.AddScoped<IJsonToRedisService, JsonToRedisService>();
-        
-        // Configurar MongoDB
-        var mongoSettings = configuration.GetSection("MongoDB").Get<MongoDbSettings>();
-        var mongoClient = new MongoClient(mongoSettings.ConnectionString);
-        var mongoDatabase = mongoClient.GetDatabase(mongoSettings.DatabaseName);
-        services.AddSingleton<IMongoDatabase>(mongoDatabase);
+        var postgresSettings = new PostgresSettings();
+        configuration.GetSection("Postgres").Bind(postgresSettings);
+
+        var client = new MongoClient(mongoDbSettings.ConnectionString);
+        var database = client.GetDatabase(mongoDbSettings.DatabaseName);
+
+        // Configura o Redis
+        var redis = ConnectionMultiplexer.Connect("localhost");
+        services.AddSingleton<IConnectionMultiplexer>(redis);
+
+        services.AddSingleton<IConfiguration>(configuration);
+        services.Configure<MongoDbSettings>(configuration.GetSection("MongoDB"));
+        services.AddSingleton(mongoDbSettings);
+        services.AddSingleton(postgresSettings);
+        services.AddSingleton(database);
 
         // Registra os serviços
+        services.AddSingleton<ICsvImportService, CsvImportService>();
+        services.AddSingleton<IJsonToRedisService, JsonToRedisService>();
+        services.AddSingleton<IJsonFormatterService, JsonFormatterService>();
+        services.AddSingleton<ITextReplacementService, TextReplacementService>();
+        services.AddSingleton<ISqlFileService, SqlFileService>();
         services.AddSingleton<IConsoleService, ConsoleService>();
         services.AddSingleton<IProgressBarService, ProgressBarService>();
-        services.AddSingleton<CsvImportService>();
-        services.AddSingleton<JsonFormatterService>();
-        services.AddSingleton<ITextReplacementService, TextReplacementService>();
-        services.AddSingleton<IJsonToRedisService, JsonToRedisService>();
-
-        // Registra as configurações
-        services.Configure<MongoDbSettings>(configuration.GetSection("MongoDb"));
-        services.Configure<RedisSettings>(configuration.GetSection("Redis"));
+        services.AddSingleton<ConsoleService>();
 
         return services.BuildServiceProvider();
     }

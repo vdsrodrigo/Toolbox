@@ -1,17 +1,40 @@
-using System.Text;
 using ToolBox.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
+using Microsoft.Extensions.Logging;
 
 namespace ToolBox.Services;
 
 public class ConsoleService : IConsoleService
 {
+    private readonly ICsvImportService _csvImportService;
+    private readonly IJsonToRedisService _jsonToRedisService;
+    private readonly IJsonFormatterService _jsonFormatterService;
+    private readonly ITextReplacementService _textReplacementService;
+    private readonly ISqlFileService _sqlFileService;
+    private readonly ILogger<ConsoleService> _logger;
+
+    public ConsoleService(
+        ICsvImportService csvImportService,
+        IJsonToRedisService jsonToRedisService,
+        IJsonFormatterService jsonFormatterService,
+        ITextReplacementService textReplacementService,
+        ISqlFileService sqlFileService,
+        ILogger<ConsoleService> logger)
+    {
+        _csvImportService = csvImportService;
+        _jsonToRedisService = jsonToRedisService;
+        _jsonFormatterService = jsonFormatterService;
+        _textReplacementService = textReplacementService;
+        _sqlFileService = sqlFileService;
+        _logger = logger;
+    }
+
     public void DisplayHeader()
     {
-        Console.WriteLine("====================================================");
-        Console.WriteLine("  CSV to MongoDB Ledger Importer");
-        Console.WriteLine("====================================================");
+        Console.WriteLine("===============================================");
+        Console.WriteLine("               ToolBox v1.0.0                  ");
+        Console.WriteLine("===============================================");
     }
 
     public void DisplayInputFile(string csvFilePath)
@@ -199,5 +222,146 @@ public class ConsoleService : IConsoleService
             DisplayError($"Erro ao publicar no Redis: {ex.Message}");
             Log.Error(ex, "Erro ao publicar dados no Redis");
         }
+    }
+
+    public async Task ProcessOptionAsync(int option)
+    {
+        try
+        {
+            switch (option)
+            {
+                case 1:
+                    await ProcessCsvImportAsync();
+                    break;
+                case 2:
+                    await ProcessJsonToRedisAsync();
+                    break;
+                case 3:
+                    await ProcessJsonFormatterAsync();
+                    break;
+                case 4:
+                    await ProcessSqlFileAsync();
+                    break;
+                default:
+                    Console.WriteLine("Opção inválida!");
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao processar opção {Option}", option);
+            Console.WriteLine($"Erro: {ex.Message}");
+        }
+    }
+
+    public async Task ProcessCsvImportAsync()
+    {
+        Console.WriteLine("\nImportação de CSV para MongoDB");
+        Console.WriteLine("=============================");
+
+        var filePath = GetInputFilePath("Digite o caminho do arquivo CSV");
+        if (string.IsNullOrEmpty(filePath)) return;
+
+        var result = await _csvImportService.ImportCsvToMongoAsync(filePath);
+        DisplayImportResult(result);
+    }
+
+    public async Task ProcessJsonToRedisAsync()
+    {
+        Console.WriteLine("\nConversão de JSON para Redis");
+        Console.WriteLine("===========================");
+
+        var filePath = GetInputFilePath("Digite o caminho do arquivo JSON");
+        if (string.IsNullOrEmpty(filePath)) return;
+
+        Console.Write("Digite o campo chave (padrão: id): ");
+        var keyField = Console.ReadLine() ?? "id";
+
+        Console.Write("Digite a chave do Redis (padrão: data): ");
+        var redisKey = Console.ReadLine() ?? "data";
+
+        await _jsonToRedisService.ExecuteAsync(filePath, keyField, redisKey);
+        Console.WriteLine("\nArquivo processado com sucesso!");
+    }
+
+    public async Task ProcessJsonFormatterAsync()
+    {
+        Console.WriteLine("\nFormatação de Arquivo JSON");
+        Console.WriteLine("=========================");
+
+        var filePath = GetInputFilePath("Digite o caminho do arquivo JSON");
+        if (string.IsNullOrEmpty(filePath)) return;
+
+        await _jsonFormatterService.FormatJsonFileAsync(filePath);
+        Console.WriteLine("\nArquivo formatado com sucesso!");
+    }
+
+    public async Task ProcessSqlFileAsync()
+    {
+        Console.WriteLine("\nProcessamento de Arquivo SQL");
+        Console.WriteLine("===========================");
+
+        var filePath = GetInputFilePath("Digite o caminho do arquivo SQL");
+        if (string.IsNullOrEmpty(filePath)) return;
+
+        Console.WriteLine("\nOpções disponíveis:");
+        Console.WriteLine("1. Remover campo");
+        Console.WriteLine("2. Executar instruções SQL");
+        Console.Write("\nEscolha uma opção: ");
+
+        if (!int.TryParse(Console.ReadLine(), out int subOption))
+        {
+            Console.WriteLine("Opção inválida!");
+            return;
+        }
+
+        switch (subOption)
+        {
+            case 1:
+                Console.Write("\nDigite o nome do campo a ser removido: ");
+                var fieldName = Console.ReadLine();
+                if (string.IsNullOrEmpty(fieldName))
+                {
+                    Console.WriteLine("Nome do campo inválido!");
+                    return;
+                }
+
+                var outputPath = await _sqlFileService.RemoveFieldFromSqlFileAsync(filePath, fieldName);
+                Console.WriteLine($"\nArquivo processado com sucesso!");
+                Console.WriteLine($"Novo arquivo salvo em: {outputPath}");
+                break;
+            case 2:
+                var (success, logPath) = await _sqlFileService.ExecuteSqlFileAsync(filePath);
+                if (success)
+                {
+                    Console.WriteLine("\nTodas as instruções SQL foram executadas com sucesso!");
+                }
+                else
+                {
+                    Console.WriteLine("\nAlgumas instruções SQL falharam durante a execução.");
+                    Console.WriteLine($"Detalhes dos erros foram salvos em: {logPath}");
+                }
+                break;
+            default:
+                Console.WriteLine("Opção inválida!");
+                break;
+        }
+    }
+
+    private void DisplayImportResult(ImportResult result)
+    {
+        Console.WriteLine("\nResultado da Importação:");
+        Console.WriteLine($"Total de registros: {result.TotalRecords:N0}");
+        Console.WriteLine($"Registros inseridos: {result.InsertedRecords:N0}");
+        Console.WriteLine($"Total de lotes: {result.TotalBatches:N0}");
+        Console.WriteLine($"Lotes com falha: {result.FailedBatches:N0}");
+        Console.WriteLine($"Duração: {result.DurationInSeconds:N2} segundos");
+        Console.WriteLine($"Registros por segundo: {result.RecordsPerSecond:N2}");
+    }
+
+    private string GetInputFilePath(string prompt)
+    {
+        Console.Write(prompt + ": ");
+        return Console.ReadLine();
     }
 }

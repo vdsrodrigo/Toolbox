@@ -10,7 +10,7 @@ using ToolBox.Domain.Entities;
 
 namespace ToolBox.Services;
 
-public class CsvImportService
+public class CsvImportService : ICsvImportService
 {
     private readonly IMongoCollection<Ledger> _collection;
     private readonly IProgressBarService _progressBarService;

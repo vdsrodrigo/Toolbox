@@ -1,11 +1,10 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
-using ShellProgressBar;
 
 namespace ToolBox.Services;
 
-public class JsonFormatterService
+public class JsonFormatterService : IJsonFormatterService
 {
     private readonly IProgressBarService _progressBarService;
     private readonly ILogger<JsonFormatterService> _logger;
@@ -117,5 +116,42 @@ public class JsonFormatterService
             }
         }
         return lineCount;
+    }
+
+    public async Task FormatJsonFileAsync(string filePath)
+    {
+        var outputPath = Path.Combine(
+            Path.GetDirectoryName(filePath)!,
+            $"{Path.GetFileNameWithoutExtension(filePath)}_formatted{Path.GetExtension(filePath)}"
+        );
+
+        var json = await File.ReadAllTextAsync(filePath);
+        var totalLines = json.Count(c => c == '\n') + 1;
+        var processedLines = 0;
+
+        _progressBarService.InitializeProgressBar(totalLines, "Formatando arquivo JSON");
+
+        try
+        {
+            var jsonObject = JsonSerializer.Deserialize<JsonElement>(json);
+            var options = new JsonSerializerOptions
+            {
+                WriteIndented = true
+            };
+
+            var formattedJson = JsonSerializer.Serialize(jsonObject, options);
+            await File.WriteAllTextAsync(outputPath, formattedJson);
+
+            _progressBarService.UpdateProgress(totalLines, "Formatação concluída");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao formatar arquivo JSON");
+            throw;
+        }
+        finally
+        {
+            _progressBarService.Dispose();
+        }
     }
 }

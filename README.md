@@ -8,6 +8,7 @@ O ToolBox é uma aplicação de console desenvolvida em .NET que oferece diversa
 2. Formatação e extração de campos específicos de arquivos JSONL
 3. Buscar e substituir texto facilmente em arquivos
 4. Importação em massa de dados JSONL no Redis
+5. Processamento de arquivos SQL
 
 A ferramenta foi projetada com foco em performance, confiabilidade e escalabilidade, implementando estratégias como processamento em lotes (batch processing) e tratamento adequado de erros.
 
@@ -35,7 +36,8 @@ ToolBox/
 ├── Configuration/
 │   ├── ApplicationSetup.cs           # Configuração da aplicação
 │   ├── MongoDbSettings.cs            # Configurações do MongoDB
-│   └── RedisSettings.cs              # Configurações do Redis
+│   ├── RedisSettings.cs              # Configurações do Redis
+│   └── PostgresSettings.cs           # Configurações do PostgreSQL
 └── Program.cs                        # Ponto de entrada da aplicação
 ```
 
@@ -69,13 +71,11 @@ ToolBox/
 - ⏱️ Mensuração clara do tempo gasto no processamento
 - 📊 Barra de progresso com estimativa de tempo restante
 
-### Recursos Gerais
-- 📝 Logging estruturado com Serilog
-- ⚙️ Configuração flexível via appsettings.json
-- 🛡️ Tratamento robusto de erros e exceções
-- 🎯 Design orientado a domínio (DDD)
-- 🔌 Arquitetura modular e extensível
-- 📊 Sistema centralizado de barras de progresso com ShellProgressBar
+### Processamento de Arquivos SQL
+- 📄 Remoção de campos específicos de instruções SQL
+- 📄 Executa instruções SQL em arquivos
+- 🛡️ Suporte para PostgreSQL
+- 📝 Logs detalhados de execução
 
 ## 🔍 Como Funciona
 
@@ -117,6 +117,15 @@ A funcionalidade de publicação JSONL no Redis atua nas seguintes etapas:
 2. **Parâmetros**: Solicita ao usuário os nomes dos campos JSON que serão utilizados como chave e valor no Redis
 3. **Processamento**: Percorre cada linha no arquivo, extraindo os valores configurados; insere os valores extraídos diretamente no Redis
 4. **Resultados**: Após a conclusão, exibe um relatório detalhado contendo o total de entradas publicadas, quantidade total de linhas processadas, tempo consumido e eventuais linhas ignoradas devido à falta dos campos especificados
+
+### Processamento de Arquivos SQL
+
+O processo de processamento de arquivos SQL segue estas etapas:
+
+1. **Entrada**: Solicita o caminho do arquivo SQL ao usuário
+2. **Parâmetros**: Solicita ao usuário o campo a ser removido ou a instrução SQL a ser executada
+3. **Processamento**: Processa o arquivo SQL, removendo ou executando as instruções conforme especificado
+4. **Resultados**: Exibe um relatório detalhado do processamento
 
 ## 📋 Modelos e Entidades
 
@@ -167,6 +176,9 @@ public class ImportResult
   "Redis": {
     "ConnectionString": "localhost:6379",
     "InstanceName": "plis-core"
+  },
+  "Postgres": {
+    "ConnectionString": "Host=localhost;Port=5432;Database=plis-core;Username=postgres;Password=postgres"
   },
   "BatchSize": 1000,
   "Serilog": {
@@ -225,6 +237,13 @@ Para aproveitar todos os recursos do **ToolBox**, siga as instruções abaixo pa
 - O processamento iniciará imediatamente, lê cada linha e publica as entradas no Redis
 - Exibe relatório com total de entradas publicadas e o tempo consumido ao concluir
 
+### 📄 **5. Processar Arquivo SQL**
+- Execute o ToolBox, digite `5` e pressione `Enter`
+- Escolha entre remover campos ou executar instruções
+- Selecione o arquivo SQL
+- Para remoção de campos, especifique o campo a ser removido
+- Para execução, verifique os logs de resultado
+
 💻 **Exemplo prático:**
 
 ```console
@@ -233,6 +252,7 @@ Escolha uma opção:
 2 - Formatar arquivo JSON
 3 - Substituir Texto em Arquivo
 4 - Ler JSONL e publicar dados no Redis
+5 - Processar Arquivo SQL
 0 - Sair
 > 4
 
@@ -266,3 +286,18 @@ A aplicação segue princípios modernos de design:
     - Service Pattern
     - Princípios SOLID
     - Progress Bar Service Pattern (centralização da lógica de barras de progresso)
+
+## 🔍 Requisitos
+
+- .NET 8.0 ou superior
+- MongoDB
+- Redis
+- PostgreSQL (opcional, para processamento de SQL)
+
+## 📋 Contribuição
+
+1. Fork o projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
+3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
+4. Push para a branch (`git push origin feature/AmazingFeature`)
+5. Abra um Pull Request
