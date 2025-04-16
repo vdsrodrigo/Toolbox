@@ -9,6 +9,8 @@ O ToolBox é uma aplicação de console desenvolvida em .NET que oferece diversa
 3. Buscar e substituir texto facilmente em arquivos
 4. Importação em massa de dados JSONL no Redis
 5. Processamento de arquivos SQL e migração
+6. Geração de instruções MongoDB
+7. Migração de dados entre sistemas
 
 A ferramenta foi projetada com foco em performance, confiabilidade e escalabilidade, implementando estratégias como processamento em lotes (batch processing) e tratamento adequado de erros.
 
@@ -81,6 +83,13 @@ ToolBox/
 - 📊 Ordenação correta de inserções (transaction, accrual, redemption)
 - 🔍 Filtragem por ledger_customer_id
 
+### Geração de Instruções MongoDB
+- 📄 Gera instruções MongoDB para atualização de pontos
+- 📄 Atualiza as collections:
+  - `ledgers`: campos `points` e `pointsBlocked`
+  - `balances`: campos `points`, `pointsAvailable` e `pointsBlocked`
+- 🛡️ Suporta execução automática após geração
+
 ## 🔍 Como Funciona
 
 ### Importação CSV para MongoDB
@@ -134,6 +143,18 @@ O processo de processamento de arquivos SQL e migração segue estas etapas:
    - Para SQL: processa o arquivo removendo campos ou executando instruções
    - Para migração: gera instruções DELETE e ordena inserções corretamente
 4. **Resultados**: Exibe um relatório detalhado do processamento
+
+### Geração de Instruções MongoDB
+
+O processo de geração de instruções MongoDB segue estas etapas:
+
+1. **Entrada**: Solicita o caminho do arquivo de migração SQL ao usuário
+2. **Processamento**: Processa o arquivo, removendo campos específicos (item_number, legacy_redemption_id)
+3. **Resultados**: Gera instruções MongoDB para atualização de pontos
+4. **Atualização**: Atualiza as collections:
+  - `ledgers`: campos `points` e `pointsBlocked`
+  - `balances`: campos `points`, `pointsAvailable` e `pointsBlocked`
+5. **Suporte**: Suporta execução automática após geração
 
 ## 📋 Modelos e Entidades
 
@@ -257,6 +278,14 @@ Para aproveitar todos os recursos do **ToolBox**, siga as instruções abaixo pa
   - Escolha se deseja filtrar por ledger_customer_id
   - Gere o arquivo formatado com deleções e inserções ordenadas
 
+### 🚀 **6. Geração de Instruções MongoDB**
+- Execute o ToolBox, digite `6` e pressione `Enter`
+- Informe o caminho do arquivo de migração SQL
+- O processamento iniciará imediatamente, processando o arquivo e gerando instruções MongoDB
+- Ao concluir, verifique os arquivos gerados:
+  - Arquivo SQL formatado
+  - Instruções MongoDB para atualização de pontos
+
 💻 **Exemplo prático:**
 
 ```console
@@ -266,70 +295,11 @@ Escolha uma opção:
 3 - Substituir Texto em Arquivo
 4 - Ler JSONL e publicar dados no Redis
 5 - Processar Arquivo SQL e Migração
+6 - Geração de Instruções MongoDB
 0 - Sair
-> 5
+> 6
 
-Escolha uma opção:
-1 - Remover campos
-2 - Executar instruções SQL
-3 - Filtrar linhas
-4 - Processar arquivo de migração
-> 1
-
-Informe o caminho do arquivo SQL:
-> C:\dados\script.sql
-
-Digite os nomes dos campos a serem removidos (separados por vírgula):
-> item_number,legacy_redemption_id
-
-Processando arquivo...
-[██████████████████████████████████████████████████] 100%
-Arquivo processado com sucesso!
-Arquivo de saída: C:\dados\script_formatado.sql
-
-Escolha uma opção:
-1 - Remover campos
-2 - Executar instruções SQL
-3 - Filtrar linhas
-4 - Processar arquivo de migração
-> 2
-
-Informe o caminho do arquivo SQL:
-> C:\dados\script.sql
-
-Informe a string de conexão PostgreSQL:
-> Host=localhost;Port=5432;Database=toolbox;Username=postgres;Password=postgres
-
-Executando instruções SQL...
-[██████████████████████████████████████████████████] 100%
-Arquivo de log gerado: C:\dados\script_execution.log
-
-Escolha uma opção:
-1 - Remover campos
-2 - Executar instruções SQL
-3 - Filtrar linhas
-4 - Processar arquivo de migração
-> 3
-
-Informe o caminho do arquivo SQL:
-> C:\dados\script.sql
-
-Digite os textos ou números para filtrar (separados por vírgula):
-> 12345,67890
-
-Processando arquivo...
-[██████████████████████████████████████████████████] 100%
-Arquivo processado com sucesso!
-Arquivo de saída: C:\dados\script_filtrado.sql
-
-Escolha uma opção:
-1 - Remover campos
-2 - Executar instruções SQL
-3 - Filtrar linhas
-4 - Processar arquivo de migração
-> 4
-
-Informe o caminho do arquivo SQL:
+Informe o caminho do arquivo de migração SQL:
 > C:\dados\migracao.sql
 
 Deseja filtrar por ledger_customer_id? (S/N):
@@ -338,10 +308,17 @@ Deseja filtrar por ledger_customer_id? (S/N):
 Digite os IDs separados por vírgula:
 > 12345,67890,54321
 
+Deseja executar os comandos SQL após a geração do arquivo? (S/N):
+> S
+
 Processando arquivo de migração...
 [██████████████████████████████████████████████████] 100%
 Arquivo processado com sucesso!
 Arquivo de saída: C:\dados\migracao_formatado.sql
+
+Executando comandos SQL...
+[██████████████████████████████████████████████████] 100%
+Comandos SQL executados com sucesso!
 
 Conteúdo do arquivo gerado:
 DELETE FROM public.redemption WHERE ledger_customer_id IN ('12345','67890','54321');
@@ -359,6 +336,14 @@ INSERT INTO public.accrual (...) VALUES (...);
 -- Inserções da tabela redemption
 INSERT INTO public.redemption (...) VALUES (...);
 ...
+
+Geração de instruções MongoDB...
+[██████████████████████████████████████████████████] 100%
+Instruções MongoDB geradas com sucesso!
+
+Arquivos gerados:
+- C:\dados\migracao_formatado.sql
+- C:\dados\migracao_mongo_instructions.js
 ```
 
 ## 📈 Design e Arquitetura

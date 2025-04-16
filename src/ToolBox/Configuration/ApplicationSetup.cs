@@ -62,7 +62,7 @@ public static class ApplicationSetup
         services.AddSingleton<IConfiguration>(configuration);
         services.Configure<MongoDbSettings>(configuration.GetSection("MongoDB"));
         services.AddSingleton(mongoDbSettings);
-        services.AddSingleton(postgresSettings);
+        services.AddSingleton<IPostgresSettings>(postgresSettings);
         services.AddSingleton(database);
 
         // Registra os serviços

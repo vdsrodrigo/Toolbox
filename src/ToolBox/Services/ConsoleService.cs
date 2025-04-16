@@ -459,9 +459,12 @@ public class ConsoleService : IConsoleService
             }
         }
 
+        Console.Write("Deseja executar os comandos SQL após a geração do arquivo? (S/N): ");
+        var executeOption = Console.ReadLine()?.ToUpper() == "S";
+
         try
         {
-            var outputPath = await _migrationFileService.ProcessMigrationFileAsync(filePath, ledgerCustomerIds);
+            var outputPath = await _migrationFileService.ProcessMigrationFileAsync(filePath, ledgerCustomerIds, executeOption);
             Console.WriteLine($"\nArquivo processado com sucesso!");
             Console.WriteLine($"Arquivo de saída: {outputPath}");
         }

@@ -15,12 +15,12 @@ public class SqlFileService : ISqlFileService
 {
     private readonly IProgressBarService _progressBarService;
     private readonly ILogger<SqlFileService> _logger;
-    private readonly PostgresSettings _postgresSettings;
+    private readonly IPostgresSettings _postgresSettings;
 
     public SqlFileService(
         IProgressBarService progressBarService,
         ILogger<SqlFileService> logger,
-        PostgresSettings postgresSettings)
+        IPostgresSettings postgresSettings)
     {
         _progressBarService = progressBarService;
         _logger = logger;
