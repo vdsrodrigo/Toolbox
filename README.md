@@ -8,7 +8,7 @@ O ToolBox é uma aplicação de console desenvolvida em .NET que oferece diversa
 2. Formatação e extração de campos específicos de arquivos JSONL
 3. Buscar e substituir texto facilmente em arquivos
 4. Importação em massa de dados JSONL no Redis
-5. Processamento de arquivos SQL
+5. Processamento de arquivos SQL e migração
 
 A ferramenta foi projetada com foco em performance, confiabilidade e escalabilidade, implementando estratégias como processamento em lotes (batch processing) e tratamento adequado de erros.
 
@@ -71,11 +71,15 @@ ToolBox/
 - ⏱️ Mensuração clara do tempo gasto no processamento
 - 📊 Barra de progresso com estimativa de tempo restante
 
-### Processamento de Arquivos SQL
+### Processamento de Arquivos SQL e Migração
 - 📄 Remoção de campos específicos de instruções SQL
 - 📄 Executa instruções SQL em arquivos
 - 🛡️ Suporte para PostgreSQL
 - 📝 Logs detalhados de execução
+- 🔄 Processamento de arquivos de migração
+- 🗑️ Geração de instruções DELETE para limpeza prévia
+- 📊 Ordenação correta de inserções (transaction, accrual, redemption)
+- 🔍 Filtragem por ledger_customer_id
 
 ## 🔍 Como Funciona
 
@@ -118,13 +122,17 @@ A funcionalidade de publicação JSONL no Redis atua nas seguintes etapas:
 3. **Processamento**: Percorre cada linha no arquivo, extraindo os valores configurados; insere os valores extraídos diretamente no Redis
 4. **Resultados**: Após a conclusão, exibe um relatório detalhado contendo o total de entradas publicadas, quantidade total de linhas processadas, tempo consumido e eventuais linhas ignoradas devido à falta dos campos especificados
 
-### Processamento de Arquivos SQL
+### Processamento de Arquivos SQL e Migração
 
-O processo de processamento de arquivos SQL segue estas etapas:
+O processo de processamento de arquivos SQL e migração segue estas etapas:
 
 1. **Entrada**: Solicita o caminho do arquivo SQL ao usuário
-2. **Parâmetros**: Solicita ao usuário o campo a ser removido ou a instrução SQL a ser executada
-3. **Processamento**: Processa o arquivo SQL, removendo ou executando as instruções conforme especificado
+2. **Parâmetros**: 
+   - Para processamento SQL: escolha entre remover campos, executar instruções ou filtrar linhas
+   - Para migração: escolha se deseja filtrar por ledger_customer_id
+3. **Processamento**: 
+   - Para SQL: processa o arquivo removendo campos ou executando instruções
+   - Para migração: gera instruções DELETE e ordena inserções corretamente
 4. **Resultados**: Exibe um relatório detalhado do processamento
 
 ## 📋 Modelos e Entidades
@@ -237,12 +245,17 @@ Para aproveitar todos os recursos do **ToolBox**, siga as instruções abaixo pa
 - O processamento iniciará imediatamente, lê cada linha e publica as entradas no Redis
 - Exibe relatório com total de entradas publicadas e o tempo consumido ao concluir
 
-### 📄 **5. Processar Arquivo SQL**
+### 📄 **5. Processar Arquivo SQL e Migração**
 - Execute o ToolBox, digite `5` e pressione `Enter`
-- Escolha entre remover campos ou executar instruções
-- Selecione o arquivo SQL
-- Para remoção de campos, especifique o campo a ser removido
-- Para execução, verifique os logs de resultado
+- Escolha entre:
+  - Remover campos específicos
+  - Executar instruções SQL
+  - Filtrar linhas
+  - Processar arquivo de migração
+- Para migração:
+  - Informe o caminho do arquivo SQL
+  - Escolha se deseja filtrar por ledger_customer_id
+  - Gere o arquivo formatado com deleções e inserções ordenadas
 
 💻 **Exemplo prático:**
 
@@ -252,24 +265,100 @@ Escolha uma opção:
 2 - Formatar arquivo JSON
 3 - Substituir Texto em Arquivo
 4 - Ler JSONL e publicar dados no Redis
-5 - Processar Arquivo SQL
+5 - Processar Arquivo SQL e Migração
 0 - Sair
+> 5
+
+Escolha uma opção:
+1 - Remover campos
+2 - Executar instruções SQL
+3 - Filtrar linhas
+4 - Processar arquivo de migração
+> 1
+
+Informe o caminho do arquivo SQL:
+> C:\dados\script.sql
+
+Digite os nomes dos campos a serem removidos (separados por vírgula):
+> item_number,legacy_redemption_id
+
+Processando arquivo...
+[██████████████████████████████████████████████████] 100%
+Arquivo processado com sucesso!
+Arquivo de saída: C:\dados\script_formatado.sql
+
+Escolha uma opção:
+1 - Remover campos
+2 - Executar instruções SQL
+3 - Filtrar linhas
+4 - Processar arquivo de migração
+> 2
+
+Informe o caminho do arquivo SQL:
+> C:\dados\script.sql
+
+Informe a string de conexão PostgreSQL:
+> Host=localhost;Port=5432;Database=toolbox;Username=postgres;Password=postgres
+
+Executando instruções SQL...
+[██████████████████████████████████████████████████] 100%
+Arquivo de log gerado: C:\dados\script_execution.log
+
+Escolha uma opção:
+1 - Remover campos
+2 - Executar instruções SQL
+3 - Filtrar linhas
+4 - Processar arquivo de migração
+> 3
+
+Informe o caminho do arquivo SQL:
+> C:\dados\script.sql
+
+Digite os textos ou números para filtrar (separados por vírgula):
+> 12345,67890
+
+Processando arquivo...
+[██████████████████████████████████████████████████] 100%
+Arquivo processado com sucesso!
+Arquivo de saída: C:\dados\script_filtrado.sql
+
+Escolha uma opção:
+1 - Remover campos
+2 - Executar instruções SQL
+3 - Filtrar linhas
+4 - Processar arquivo de migração
 > 4
 
-Informe o caminho do arquivo JSONL a ser processado:
-> dados/usuarios.jsonl
+Informe o caminho do arquivo SQL:
+> C:\dados\migracao.sql
 
-Digite o nome do campo a ser usado como chave no Redis:
-> idUsuario
+Deseja filtrar por ledger_customer_id? (S/N):
+> S
 
-Digite o nome do campo a ser usado como valor no Redis:
-> email
+Digite os IDs separados por vírgula:
+> 12345,67890,54321
 
-Processando e publicando dados para o Redis...
+Processando arquivo de migração...
+[██████████████████████████████████████████████████] 100%
+Arquivo processado com sucesso!
+Arquivo de saída: C:\dados\migracao_formatado.sql
 
-Publicação concluída com sucesso.
-Total de entradas publicadas no Redis: 87482
-Tempo total gasto: 00:00:05.214
+Conteúdo do arquivo gerado:
+DELETE FROM public.redemption WHERE ledger_customer_id IN ('12345','67890','54321');
+DELETE FROM public.accrual WHERE ledger_customer_id IN ('12345','67890','54321');
+DELETE FROM public.transaction WHERE ledger_customer_id IN ('12345','67890','54321');
+
+-- Inserções da tabela transaction
+INSERT INTO public.transaction (...) VALUES (...);
+...
+
+-- Inserções da tabela accrual
+INSERT INTO public.accrual (...) VALUES (...);
+...
+
+-- Inserções da tabela redemption
+INSERT INTO public.redemption (...) VALUES (...);
+...
 ```
 
 ## 📈 Design e Arquitetura

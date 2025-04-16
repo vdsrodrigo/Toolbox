@@ -8,6 +8,7 @@ public interface ISqlFileService
 {
     Task<string> RemoveFieldFromSqlFileAsync(string filePath, string fieldName);
     Task<(bool success, string logPath)> ExecuteSqlFileAsync(string filePath);
+    Task<string> FilterSqlLinesAsync(string filePath, IEnumerable<string> searchStrings);
 }
 
 public class SqlFileService : ISqlFileService
@@ -246,6 +247,49 @@ public class SqlFileService : ISqlFileService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Erro ao executar arquivo SQL");
+            throw;
+        }
+        finally
+        {
+            _progressBarService.Dispose();
+        }
+    }
+
+    public async Task<string> FilterSqlLinesAsync(string filePath, IEnumerable<string> searchStrings)
+    {
+        var outputPath = Path.Combine(
+            Path.GetDirectoryName(filePath)!,
+            $"{Path.GetFileNameWithoutExtension(filePath)}_filtrado{Path.GetExtension(filePath)}"
+        );
+
+        var lines = await File.ReadAllLinesAsync(filePath);
+        var totalLines = lines.Length;
+        var processedLines = 0;
+        var matchedLines = 0;
+
+        _progressBarService.InitializeProgressBar(totalLines, "Filtrando linhas do arquivo SQL");
+
+        try
+        {
+            using var writer = new StreamWriter(outputPath);
+            foreach (var line in lines)
+            {
+                if (searchStrings.Any(search => line.Contains(search, StringComparison.OrdinalIgnoreCase)))
+                {
+                    await writer.WriteLineAsync(line);
+                    matchedLines++;
+                }
+                
+                processedLines++;
+                _progressBarService.UpdateProgress(processedLines, 
+                    $"Processadas {processedLines:N0} de {totalLines:N0} linhas. Encontradas: {matchedLines:N0}");
+            }
+
+            return outputPath;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao filtrar linhas do arquivo SQL");
             throw;
         }
         finally

@@ -20,6 +20,7 @@ try
         Console.WriteLine("2. Converter JSON para Redis");
         Console.WriteLine("3. Formatar arquivo JSON");
         Console.WriteLine("4. Processar arquivo SQL");
+        Console.WriteLine("5. Formatar arquivo de migração");
         Console.WriteLine("0 - Sair");
         Console.Write("\nSua escolha: ");
 
@@ -34,6 +35,7 @@ try
                 case 2:
                 case 3:
                 case 4:
+                case 5:
                     await consoleService.ProcessOptionAsync(option);
                     break;
                 default:

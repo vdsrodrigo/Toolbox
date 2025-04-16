@@ -12,6 +12,7 @@ public class ConsoleService : IConsoleService
     private readonly IJsonFormatterService _jsonFormatterService;
     private readonly ITextReplacementService _textReplacementService;
     private readonly ISqlFileService _sqlFileService;
+    private readonly IMigrationFileService _migrationFileService;
     private readonly ILogger<ConsoleService> _logger;
 
     public ConsoleService(
@@ -20,6 +21,7 @@ public class ConsoleService : IConsoleService
         IJsonFormatterService jsonFormatterService,
         ITextReplacementService textReplacementService,
         ISqlFileService sqlFileService,
+        IMigrationFileService migrationFileService,
         ILogger<ConsoleService> logger)
     {
         _csvImportService = csvImportService;
@@ -27,6 +29,7 @@ public class ConsoleService : IConsoleService
         _jsonFormatterService = jsonFormatterService;
         _textReplacementService = textReplacementService;
         _sqlFileService = sqlFileService;
+        _migrationFileService = migrationFileService;
         _logger = logger;
     }
 
@@ -224,6 +227,39 @@ public class ConsoleService : IConsoleService
         }
     }
 
+    public void DisplayMenu()
+    {
+        Console.WriteLine("\nMenu Principal");
+        Console.WriteLine("==============");
+        Console.WriteLine("1. Importar CSV para MongoDB");
+        Console.WriteLine("2. Processar JSON para Redis");
+        Console.WriteLine("3. Formatar arquivo JSON");
+        Console.WriteLine("4. Processar arquivo SQL");
+        Console.WriteLine("5. Formatar arquivo de migração");
+        Console.WriteLine("0. Sair");
+        Console.Write("\nEscolha uma opção: ");
+    }
+
+    public async Task RunAsync()
+    {
+        while (true)
+        {
+            DisplayMenu();
+            if (!int.TryParse(Console.ReadLine(), out int option))
+            {
+                Console.WriteLine("Opção inválida!");
+                continue;
+            }
+
+            if (option == 0)
+            {
+                break;
+            }
+
+            await ProcessOptionAsync(option);
+        }
+    }
+
     public async Task ProcessOptionAsync(int option)
     {
         try
@@ -241,6 +277,9 @@ public class ConsoleService : IConsoleService
                     break;
                 case 4:
                     await ProcessSqlFileAsync();
+                    break;
+                case 5:
+                    await ProcessMigrationFileAsync();
                     break;
                 default:
                     Console.WriteLine("Opção inválida!");
@@ -307,6 +346,7 @@ public class ConsoleService : IConsoleService
         Console.WriteLine("\nOpções disponíveis:");
         Console.WriteLine("1. Remover campo");
         Console.WriteLine("2. Executar instruções SQL");
+        Console.WriteLine("3. Filtrar linhas");
         Console.Write("\nEscolha uma opção: ");
 
         if (!int.TryParse(Console.ReadLine(), out int subOption))
@@ -318,17 +358,38 @@ public class ConsoleService : IConsoleService
         switch (subOption)
         {
             case 1:
-                Console.Write("\nDigite o nome do campo a ser removido: ");
-                var fieldName = Console.ReadLine();
-                if (string.IsNullOrEmpty(fieldName))
+                Console.Write("\nDigite os nomes dos campos a serem removidos (separados por vírgula): ");
+                var fieldsInput = Console.ReadLine();
+                if (string.IsNullOrEmpty(fieldsInput))
                 {
-                    Console.WriteLine("Nome do campo inválido!");
+                    Console.WriteLine("Nomes dos campos inválidos!");
                     return;
                 }
 
-                var outputPath = await _sqlFileService.RemoveFieldFromSqlFileAsync(filePath, fieldName);
+                var fieldNames = fieldsInput.Split(',')
+                    .Select(field => field.Trim())
+                    .Where(field => !string.IsNullOrEmpty(field))
+                    .ToList();
+
+                if (!fieldNames.Any())
+                {
+                    Console.WriteLine("Nenhum campo válido informado!");
+                    return;
+                }
+
+                var currentFilePath = filePath;
+                foreach (var fieldName in fieldNames)
+                {
+                    var tempOutputPath = await _sqlFileService.RemoveFieldFromSqlFileAsync(currentFilePath, fieldName);
+                    if (currentFilePath != filePath)
+                    {
+                        File.Delete(currentFilePath);
+                    }
+                    currentFilePath = tempOutputPath;
+                }
+
                 Console.WriteLine($"\nArquivo processado com sucesso!");
-                Console.WriteLine($"Novo arquivo salvo em: {outputPath}");
+                Console.WriteLine($"Novo arquivo salvo em: {currentFilePath}");
                 break;
             case 2:
                 var (success, logPath) = await _sqlFileService.ExecuteSqlFileAsync(filePath);
@@ -342,9 +403,71 @@ public class ConsoleService : IConsoleService
                     Console.WriteLine($"Detalhes dos erros foram salvos em: {logPath}");
                 }
                 break;
+            case 3:
+                Console.Write("\nDigite os textos ou números para filtrar (separados por vírgula): ");
+                var searchInput = Console.ReadLine();
+                if (string.IsNullOrEmpty(searchInput))
+                {
+                    Console.WriteLine("Texto de busca inválido!");
+                    return;
+                }
+
+                var searchTerms = searchInput.Split(',')
+                    .Select(term => term.Trim())
+                    .Where(term => !string.IsNullOrEmpty(term))
+                    .ToList();
+
+                if (!searchTerms.Any())
+                {
+                    Console.WriteLine("Nenhum termo válido informado!");
+                    return;
+                }
+
+                var filteredPath = await _sqlFileService.FilterSqlLinesAsync(filePath, searchTerms);
+                Console.WriteLine($"\nArquivo filtrado gerado com sucesso!");
+                Console.WriteLine($"Novo arquivo salvo em: {filteredPath}");
+                break;
             default:
                 Console.WriteLine("Opção inválida!");
                 break;
+        }
+    }
+
+    private async Task ProcessMigrationFileAsync()
+    {
+        Console.WriteLine("\n=== Processamento de Arquivo de Migração ===");
+        Console.Write("Digite o caminho do arquivo SQL: ");
+        var filePath = Console.ReadLine();
+
+        if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+        {
+            Console.WriteLine("Arquivo não encontrado!");
+            return;
+        }
+
+        Console.Write("Deseja filtrar por ledger_customer_id? (S/N): ");
+        var filterOption = Console.ReadLine()?.ToUpper();
+
+        string[]? ledgerCustomerIds = null;
+        if (filterOption == "S")
+        {
+            Console.Write("Digite os IDs separados por vírgula: ");
+            var idsInput = Console.ReadLine();
+            if (!string.IsNullOrWhiteSpace(idsInput))
+            {
+                ledgerCustomerIds = idsInput.Split(',').Select(id => id.Trim()).ToArray();
+            }
+        }
+
+        try
+        {
+            var outputPath = await _migrationFileService.ProcessMigrationFileAsync(filePath, ledgerCustomerIds);
+            Console.WriteLine($"\nArquivo processado com sucesso!");
+            Console.WriteLine($"Arquivo de saída: {outputPath}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"\nErro ao processar arquivo: {ex.Message}");
         }
     }
 
