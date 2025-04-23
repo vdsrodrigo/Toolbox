@@ -86,7 +86,7 @@ public class JsonToRedisService : IJsonToRedisService
 
     private async Task PublishBatchAsync(IDatabase db, List<(string Key, string Value)> batch)
     {
-        var tasks = batch.Select(item => db.StringSetAsync(item.Key, item.Value));
+        var tasks = batch.Select(item => db.StringSetAsync($"plis-statement:{item.Key}", item.Value));
         await Task.WhenAll(tasks);
     }
 }
