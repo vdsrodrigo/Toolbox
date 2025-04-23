@@ -56,8 +56,11 @@ public static class ApplicationSetup
         var database = client.GetDatabase(mongoDbSettings.DatabaseName);
 
         // Configura o Redis
-        var redis = ConnectionMultiplexer.Connect("localhost");
+        var redisSettings = new RedisSettings(configuration["Redis:InstanceName"]);
+        var redisConnectionString = configuration["Redis:ConnectionString"];
+        var redis = ConnectionMultiplexer.Connect(redisConnectionString);
         services.AddSingleton<IConnectionMultiplexer>(redis);
+        services.AddSingleton(redisSettings);
 
         services.AddSingleton<IConfiguration>(configuration);
         services.Configure<MongoDbSettings>(configuration.GetSection("MongoDB"));
