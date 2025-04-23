@@ -23,20 +23,6 @@ public class JsonToRedisService : IJsonToRedisService
     public async Task<int> ExecuteAsync(string filePath, string keyField, string valueField)
     {
         var db = _redis.GetDatabase();
-        
-        // Validação mais robusta da conexão
-        var endpoints = _redis.GetEndPoints();
-        var server = _redis.GetServer(endpoints.First());
-        _logger.LogInformation("Detalhes da conexão Redis:");
-        _logger.LogInformation("Endpoint: {Endpoint}", server.EndPoint);
-        _logger.LogInformation("Server Type: {ServerType}", server.ServerType);
-        _logger.LogInformation("IsConnected: {IsConnected}", server.IsConnected);
-        
-        if (!server.IsConnected)
-        {
-            throw new Exception("Não foi possível estabelecer conexão com o Redis. Verifique a connectionString.");
-        }
-        
         var totalLines = File.ReadLines(filePath).Count();
         var batchSize = 1000;
         var totalBatches = (int)Math.Ceiling(totalLines / (double)batchSize);
@@ -76,7 +62,6 @@ public class JsonToRedisService : IJsonToRedisService
                 {
                     await PublishBatchAsync(db, batch);
                     totalPublished += batch.Count;
-                    _logger.LogInformation("Batch publicado com sucesso. Total de registros: {TotalPublished}", totalPublished);
                     batch.Clear();
                     currentBatch++;
                     _progressBarService.UpdateProgress(currentBatch, $"Processado {totalPublished:N0} registros");
@@ -87,17 +72,11 @@ public class JsonToRedisService : IJsonToRedisService
             {
                 await PublishBatchAsync(db, batch);
                 totalPublished += batch.Count;
-                _logger.LogInformation("Último batch publicado com sucesso. Total final de registros: {TotalPublished}", totalPublished);
                 currentBatch++;
                 _progressBarService.UpdateProgress(currentBatch, $"Processado {totalPublished:N0} registros");
             }
 
             return totalPublished;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Erro durante a execução do serviço");
-            throw;
         }
         finally
         {
@@ -109,24 +88,8 @@ public class JsonToRedisService : IJsonToRedisService
     {
         try
         {
-            var tasks = batch.Select(item => 
-            {
-                var fullKey = $"plis-statement:{item.Key}";
-                _logger.LogInformation("Publicando no Redis - Chave: {Key}, Valor: {Value}", fullKey, item.Value);
-                return db.StringSetAsync(fullKey, item.Value);
-            });
-            
-            var results = await Task.WhenAll(tasks);
-            var successCount = results.Count(r => r);
-            _logger.LogInformation("Batch publicado. Sucessos: {SuccessCount}/{Total}", successCount, batch.Count);
-            
-            // Verifica se as chaves foram realmente salvas
-            foreach (var item in batch)
-            {
-                var fullKey = $"plis-statement:{item.Key}";
-                var exists = await db.KeyExistsAsync(fullKey);
-                _logger.LogInformation("Verificação pós-inserção - Chave: {Key}, Existe: {Exists}", fullKey, exists);
-            }
+            var tasks = batch.Select(item => db.StringSetAsync($"plis-statement:{item.Key}", item.Value));
+            await Task.WhenAll(tasks);
         }
         catch (Exception ex)
         {
