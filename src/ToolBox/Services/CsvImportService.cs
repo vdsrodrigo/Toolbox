@@ -94,7 +94,18 @@ public class CsvImportService : ICsvImportService
     {
         try
         {
-            await _collection.InsertManyAsync(batch);
+            var insertOptions = new InsertManyOptions { IsOrdered = false };
+            await _collection.InsertManyAsync(batch, insertOptions);
+        }
+        catch (MongoBulkWriteException ex)
+        {
+            // Calcula quantos registros foram inseridos com sucesso
+            var insertedCount = batch.Count - ex.WriteErrors.Count;
+            result.InsertedRecords += insertedCount;
+            result.FailedRecords += ex.WriteErrors.Count;
+            
+            _logger.LogWarning("Alguns registros duplicados foram ignorados. Inseridos: {Inserted}, Falhas: {Failed}", 
+                insertedCount, ex.WriteErrors.Count);
         }
         catch (Exception ex)
         {
