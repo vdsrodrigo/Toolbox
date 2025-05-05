@@ -21,6 +21,7 @@ try
         Console.WriteLine("3. Formatar arquivo JSON");
         Console.WriteLine("4. Processar arquivo SQL");
         Console.WriteLine("5. Formatar arquivo de migração");
+        Console.WriteLine("6. Processar CPFs do CSV");
         Console.WriteLine("0 - Sair");
         Console.Write("\nSua escolha: ");
 
@@ -36,6 +37,7 @@ try
                 case 3:
                 case 4:
                 case 5:
+                case 6:
                     await consoleService.ProcessOptionAsync(option);
                     break;
                 default:

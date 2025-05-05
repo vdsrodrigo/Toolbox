@@ -14,6 +14,7 @@ public class ConsoleService : IConsoleService
     private readonly ISqlFileService _sqlFileService;
     private readonly IMigrationFileService _migrationFileService;
     private readonly ILogger<ConsoleService> _logger;
+    private readonly ClienteDataProcessor _clienteDataProcessor;
 
     public ConsoleService(
         ICsvImportService csvImportService,
@@ -22,7 +23,8 @@ public class ConsoleService : IConsoleService
         ITextReplacementService textReplacementService,
         ISqlFileService sqlFileService,
         IMigrationFileService migrationFileService,
-        ILogger<ConsoleService> logger)
+        ILogger<ConsoleService> logger,
+        ClienteDataProcessor clienteDataProcessor)
     {
         _csvImportService = csvImportService;
         _jsonToRedisService = jsonToRedisService;
@@ -31,6 +33,7 @@ public class ConsoleService : IConsoleService
         _sqlFileService = sqlFileService;
         _migrationFileService = migrationFileService;
         _logger = logger;
+        _clienteDataProcessor = clienteDataProcessor;
     }
 
     public void DisplayHeader()
@@ -236,6 +239,7 @@ public class ConsoleService : IConsoleService
         Console.WriteLine("3. Formatar arquivo JSON");
         Console.WriteLine("4. Processar arquivo SQL");
         Console.WriteLine("5. Formatar arquivo de migração");
+        Console.WriteLine("6. Processar CPFs do CSV");
         Console.WriteLine("0. Sair");
         Console.Write("\nEscolha uma opção: ");
     }
@@ -280,6 +284,9 @@ public class ConsoleService : IConsoleService
                     break;
                 case 5:
                     await ProcessMigrationFileAsync();
+                    break;
+                case 6:
+                    await ProcessCpfFilterAsync();
                     break;
                 default:
                     Console.WriteLine("Opção inválida!");
@@ -471,6 +478,45 @@ public class ConsoleService : IConsoleService
         catch (Exception ex)
         {
             Console.WriteLine($"\nErro ao processar arquivo: {ex.Message}");
+        }
+    }
+
+    private async Task ProcessCpfFilterAsync()
+    {
+        Console.WriteLine("\nProcessamento de CPFs do CSV");
+        Console.WriteLine("===========================");
+
+        Console.Write("Digite o caminho do arquivo CSV com os CPFs: ");
+        var csvFilePath = Console.ReadLine();
+        if (string.IsNullOrEmpty(csvFilePath))
+        {
+            Console.WriteLine("Caminho do arquivo CSV não fornecido!");
+            return;
+        }
+
+        Console.Write("Digite o caminho do arquivo JSONL com os dados: ");
+        var jsonlFilePath = Console.ReadLine();
+        if (string.IsNullOrEmpty(jsonlFilePath))
+        {
+            Console.WriteLine("Caminho do arquivo JSONL não fornecido!");
+            return;
+        }
+
+        var outputFilePath = Path.Combine(
+            Path.GetDirectoryName(jsonlFilePath)!,
+            $"{Path.GetFileNameWithoutExtension(jsonlFilePath)}_final{Path.GetExtension(jsonlFilePath)}"
+        );
+
+        try
+        {
+            await _clienteDataProcessor.ProcessarArquivos(csvFilePath, jsonlFilePath, outputFilePath);
+            Console.WriteLine("\nProcessamento concluído com sucesso!");
+            Console.WriteLine($"Arquivo de saída: {outputFilePath}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"\nErro ao processar arquivos: {ex.Message}");
+            _logger.LogError(ex, "Erro ao processar arquivos de CPF");
         }
     }
 

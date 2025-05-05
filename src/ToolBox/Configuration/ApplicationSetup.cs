@@ -78,6 +78,7 @@ public static class ApplicationSetup
         services.AddSingleton<IConsoleService, ConsoleService>();
         services.AddSingleton<IProgressBarService, ProgressBarService>();
         services.AddSingleton<ConsoleService>();
+        services.AddSingleton<ClienteDataProcessor>();
 
         return services.BuildServiceProvider();
     }
