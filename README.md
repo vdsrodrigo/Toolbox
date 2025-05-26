@@ -11,6 +11,7 @@ O ToolBox é uma aplicação de console desenvolvida em .NET que oferece diversa
 5. Processamento de arquivos SQL e migração
 6. Geração de instruções MongoDB
 7. Migração de dados entre sistemas
+8. Processamento de CPFs do CSV
 
 A ferramenta foi projetada com foco em performance, confiabilidade e escalabilidade, implementando estratégias como processamento em lotes (batch processing) e tratamento adequado de erros.
 
@@ -90,6 +91,16 @@ ToolBox/
   - `balances`: campos `points`, `pointsAvailable` e `pointsBlocked`
 - 🛡️ Suporta execução automática após geração
 
+### Processamento de CPFs do CSV
+- 📄 Lê CPFs da primeira coluna do arquivo CSV
+- 🔍 Busca os CPFs no arquivo JSONL
+- 📄 Gera um novo arquivo JSONL contendo apenas os registros dos CPFs encontrados
+- 📊 Mostra barra de progresso com:
+  - Total de linhas processadas
+  - Total de CPFs encontrados
+  - Total de linhas inválidas
+- 📄 O arquivo de saída é gerado na mesma pasta do arquivo JSONL com o sufixo "_final"
+
 ## 🔍 Como Funciona
 
 ### Importação CSV para MongoDB
@@ -155,6 +166,14 @@ O processo de geração de instruções MongoDB segue estas etapas:
   - `ledgers`: campos `points` e `pointsBlocked`
   - `balances`: campos `points`, `pointsAvailable` e `pointsBlocked`
 5. **Suporte**: Suporta execução automática após geração
+
+### Processamento de CPFs do CSV
+
+O processo de processamento de CPFs do CSV segue estas etapas:
+
+1. **Entrada**: Solicita o caminho do arquivo CSV com os CPFs e o caminho do arquivo JSONL com os dados
+2. **Processamento**: Lê CPFs da primeira coluna do arquivo CSV, busca os CPFs no arquivo JSONL e gera um novo arquivo JSONL contendo apenas os registros dos CPFs encontrados
+3. **Resultados**: Exibe um relatório detalhado do processamento, incluindo o total de linhas processadas, CPFs encontrados e linhas inválidas
 
 ## 📋 Modelos e Entidades
 
@@ -286,6 +305,13 @@ Para aproveitar todos os recursos do **ToolBox**, siga as instruções abaixo pa
   - Arquivo SQL formatado
   - Instruções MongoDB para atualização de pontos
 
+### 🚀 **7. Processar CPFs do CSV**
+- Execute o ToolBox, digite `7` e pressione `Enter`
+- Informe o caminho do arquivo CSV com os CPFs
+- Informe o caminho do arquivo JSONL com os dados
+- O processamento iniciará imediatamente, lê CPFs da primeira coluna do CSV, busca os CPFs no JSONL e gera um novo arquivo JSONL contendo apenas os registros dos CPFs encontrados
+- Exibe relatório detalhado do processamento, incluindo o total de linhas processadas, CPFs encontrados e linhas inválidas
+
 💻 **Exemplo prático:**
 
 ```console
@@ -296,54 +322,25 @@ Escolha uma opção:
 4 - Ler JSONL e publicar dados no Redis
 5 - Processar Arquivo SQL e Migração
 6 - Geração de Instruções MongoDB
+7 - Processar CPFs do CSV
 0 - Sair
-> 6
+> 7
 
-Informe o caminho do arquivo de migração SQL:
-> C:\dados\migracao.sql
+Informe o caminho do arquivo CSV com os CPFs:
+> C:\dados\cpfs.csv
 
-Deseja filtrar por ledger_customer_id? (S/N):
-> S
+Informe o caminho do arquivo JSONL com os dados:
+> C:\dados\dados.jsonl
 
-Digite os IDs separados por vírgula:
-> 12345,67890,54321
-
-Deseja executar os comandos SQL após a geração do arquivo? (S/N):
-> S
-
-Processando arquivo de migração...
+Processando CPFs do CSV...
 [██████████████████████████████████████████████████] 100%
-Arquivo processado com sucesso!
-Arquivo de saída: C:\dados\migracao_formatado.sql
+CPFs processados com sucesso!
+Arquivo de saída: C:\dados\dados_final.jsonl
 
-Executando comandos SQL...
-[██████████████████████████████████████████████████] 100%
-Comandos SQL executados com sucesso!
-
-Conteúdo do arquivo gerado:
-DELETE FROM public.redemption WHERE ledger_customer_id IN ('12345','67890','54321');
-DELETE FROM public.accrual WHERE ledger_customer_id IN ('12345','67890','54321');
-DELETE FROM public.transaction WHERE ledger_customer_id IN ('12345','67890','54321');
-
--- Inserções da tabela transaction
-INSERT INTO public.transaction (...) VALUES (...);
-...
-
--- Inserções da tabela accrual
-INSERT INTO public.accrual (...) VALUES (...);
-...
-
--- Inserções da tabela redemption
-INSERT INTO public.redemption (...) VALUES (...);
-...
-
-Geração de instruções MongoDB...
-[██████████████████████████████████████████████████] 100%
-Instruções MongoDB geradas com sucesso!
-
-Arquivos gerados:
-- C:\dados\migracao_formatado.sql
-- C:\dados\migracao_mongo_instructions.js
+Relatório de processamento:
+- Total de linhas processadas: 1000
+- Total de CPFs encontrados: 800
+- Total de linhas inválidas: 200
 ```
 
 ## 📈 Design e Arquitetura
@@ -363,7 +360,7 @@ A aplicação segue princípios modernos de design:
 
 ## 🔍 Requisitos
 
-- .NET 8.0 ou superior
+- .NET 9.0 ou superior
 - MongoDB
 - Redis
 - PostgreSQL (opcional, para processamento de SQL)
