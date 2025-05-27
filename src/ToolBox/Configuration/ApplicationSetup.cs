@@ -60,16 +60,15 @@ public static class ApplicationSetup
         var redisConnectionString = configuration["Redis:ConnectionString"];
         var redis = ConnectionMultiplexer.Connect(redisConnectionString);
         services.AddSingleton<IConnectionMultiplexer>(redis);
-        services.AddSingleton(redisSettings);
-
-        services.AddSingleton<IConfiguration>(configuration);
+        services.AddSingleton(redisSettings); services.AddSingleton<IConfiguration>(configuration);
         services.Configure<MongoDbSettings>(configuration.GetSection("MongoDB"));
         services.AddSingleton(mongoDbSettings);
         services.AddSingleton<IPostgresSettings>(postgresSettings);
-        services.AddSingleton(database);
-
-        // Registra os serviços
+        services.AddSingleton(database);        // Registra os serviços
         services.AddSingleton<ICsvImportService, CsvImportService>();
+        services.AddSingleton<ICsvToPostgresService, CsvToPostgresService>();
+        services.AddSingleton<IJsonReaderService, JsonReaderService>();
+        services.AddSingleton<IJsonToPostgresService, JsonToPostgresService>();
         services.AddSingleton<IJsonToRedisService, JsonToRedisService>();
         services.AddSingleton<IJsonFormatterService, JsonFormatterService>();
         services.AddSingleton<ITextReplacementService, TextReplacementService>();
@@ -77,6 +76,7 @@ public static class ApplicationSetup
         services.AddSingleton<IMigrationFileService, MigrationFileService>();
         services.AddSingleton<IConsoleService, ConsoleService>();
         services.AddSingleton<IProgressBarService, ProgressBarService>();
+        services.AddSingleton<IMemberRepository, PostgresDbService>();
         services.AddSingleton<ConsoleService>();
         services.AddSingleton<ClienteDataProcessor>();
 

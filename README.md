@@ -12,6 +12,7 @@ O ToolBox é uma aplicação de console desenvolvida em .NET que oferece diversa
 6. Geração de instruções MongoDB
 7. Migração de dados entre sistemas
 8. Processamento de CPFs do CSV
+9. Importação em massa de dados JSONL para tabela "member" no PostgreSQL
 
 A ferramenta foi projetada com foco em performance, confiabilidade e escalabilidade, implementando estratégias como processamento em lotes (batch processing) e tratamento adequado de erros.
 
@@ -26,11 +27,14 @@ ToolBox/
 │       └── DomainException.cs        # Exceções de domínio
 ├── Models/
 │   ├── CsvMember.cs                  # DTO para mapeamento do CSV
+│   ├── JsonMember.cs                 # DTO para mapeamento do JSONL
 │   └── ImportResult.cs               # Modelo para resultado da importação
 ├── Services/
 │   ├── CsvImportService.cs           # Serviço de importação CSV
 │   ├── CsvReaderService.cs           # Serviço de leitura do CSV
 │   ├── JsonFormatterService.cs       # Serviço de formatação JSON
+│   ├── JsonReaderService.cs          # Serviço de leitura JSONL
+│   ├── JsonToPostgresService.cs      # Serviço de importação JSONL para PostgreSQL
 │   ├── MongoDbService.cs             # Implementação do repositório MongoDB
 │   ├── ConsoleService.cs             # Serviço de apresentação no console
 │   ├── JsonToRedisService.cs         # Serviço de importação para o Redis
@@ -47,26 +51,30 @@ ToolBox/
 ## ✨ Principais Funcionalidades
 
 ### Importação CSV para MongoDB
+
 - 🔄 Importação em lotes (batch processing) para melhor performance
 - 📈 Criação automática de índice único no campo CPF
 - 📊 Relatório detalhado de estatísticas de importação
 - 📈 Barra de progresso com estimativa de tempo restante
 
 ### Formatação de Arquivos JSONL
+
 - 🔍 Extração de campos específicos de arquivos JSONL
 - 📊 Barra de progresso com estimativa de tempo restante
-- 📄 Geração de novo arquivo com prefixo "_formatted"
+- 📄 Geração de novo arquivo com prefixo "\_formatted"
 
 ### Buscar e substituir textos em arquivos
+
 - 🔎 Busca rápida e eficiente de texto nos arquivos
 - ✂️ Substituição automática do texto encontrado por palavras ou expressões definidas pelo usuário
 - 🗑️ Suporte para remoção de texto (deixando o campo de substituição vazio)
-- 📑 Geração automática de arquivo resultante com prefixo "_replaced"
+- 📑 Geração automática de arquivo resultante com prefixo "\_replaced"
 - ✅ Exibição resumida com o total de linhas processadas e correspondências encontradas
 - ⏱️ Exibição do tempo de processamento detalhado
 - 📊 Barra de progresso com estimativa de tempo restante
 
 ### Publicação de JSONL para Redis
+
 - 📥 Leitura de arquivos JSONL com eficiência e robustez
 - 🔑 Seleção dinâmica de campos JSON como chave e valor
 - ⚡ Publicação direta dos pares chave-valor no Redis
@@ -75,6 +83,7 @@ ToolBox/
 - 📊 Barra de progresso com estimativa de tempo restante
 
 ### Processamento de Arquivos SQL e Migração
+
 - 📄 Remoção de campos específicos de instruções SQL
 - 📄 Executa instruções SQL em arquivos
 - 🛡️ Suporte para PostgreSQL
@@ -85,6 +94,7 @@ ToolBox/
 - 🔍 Filtragem por ledger_customer_id
 
 ### Geração de Instruções MongoDB
+
 - 📄 Gera instruções MongoDB para atualização de pontos
 - 📄 Atualiza as collections:
   - `ledgers`: campos `points` e `pointsBlocked`
@@ -92,6 +102,7 @@ ToolBox/
 - 🛡️ Suporta execução automática após geração
 
 ### Processamento de CPFs do CSV
+
 - 📄 Lê CPFs da primeira coluna do arquivo CSV
 - 🔍 Busca os CPFs no arquivo JSONL
 - 📄 Gera um novo arquivo JSONL contendo apenas os registros dos CPFs encontrados
@@ -99,7 +110,17 @@ ToolBox/
   - Total de linhas processadas
   - Total de CPFs encontrados
   - Total de linhas inválidas
-- 📄 O arquivo de saída é gerado na mesma pasta do arquivo JSONL com o sufixo "_final"
+
+### Importação JSONL para PostgreSQL
+
+- 📥 Leitura eficiente de arquivos JSONL com estrutura no estilo MongoDB
+- 🔄 Conversão automática de IDs e timestamps do formato MongoDB para PostgreSQL
+- 🛡️ Criação automática de tabela e índices no PostgreSQL se não existirem
+- 📊 Importação em lotes (batch processing) para performance otimizada
+- 📈 Barra de progresso com estimativa de tempo restante
+- 📊 Relatório detalhado de estatísticas de importação
+- 🔑 Geração automática de UUIDs v7 para o campo external_id
+- 📄 O arquivo de saída é gerado na mesma pasta do arquivo JSONL com o sufixo "\_final"
 
 ## 🔍 Como Funciona
 
@@ -122,7 +143,7 @@ O processo de formatação segue estas etapas:
 2. **Preparação**: O sistema analisa o arquivo para determinar seu tamanho total
 3. **Processamento**: Cada linha é lida, processada e os campos selecionados são extraídos
 4. **Monitoramento**: Uma barra de progresso exibe o status, incluindo porcentagem concluída e tempo estimado restante
-5. **Saída**: Um novo arquivo é criado com o sufixo "_formatted", contendo apenas os campos selecionados
+5. **Saída**: Um novo arquivo é criado com o sufixo "\_formatted", contendo apenas os campos selecionados
 
 ### Buscar e substituir textos em arquivos
 
@@ -131,7 +152,7 @@ A funcionalidade de busca e substituição atua nas seguintes etapas:
 1. **Entrada**: Solicita o caminho do arquivo original ao usuário
 2. **Parâmetros**: Solicita o texto que deve ser encontrado e a expressão que substituirá esse texto nas ocorrências (caso o campo de substituição seja deixado vazio, o texto será removido)
 3. **Processamento**: Cada linha é analisada e processada rapidamente, realizando as substituições ou remoções necessárias
-4. **Resultados**: Ao final, exibe um relatório contendo o total de correspondências encontradas, número total de linhas processadas, tempo consumido e o caminho do arquivo modificado gerado com prefixo "_replaced"
+4. **Resultados**: Ao final, exibe um relatório contendo o total de correspondências encontradas, número total de linhas processadas, tempo consumido e o caminho do arquivo modificado gerado com prefixo "\_replaced"
 
 ### Publicação de JSONL para Redis
 
@@ -147,10 +168,10 @@ A funcionalidade de publicação JSONL no Redis atua nas seguintes etapas:
 O processo de processamento de arquivos SQL e migração segue estas etapas:
 
 1. **Entrada**: Solicita o caminho do arquivo SQL ao usuário
-2. **Parâmetros**: 
+2. **Parâmetros**:
    - Para processamento SQL: escolha entre remover campos, executar instruções ou filtrar linhas
    - Para migração: escolha se deseja filtrar por ledger_customer_id
-3. **Processamento**: 
+3. **Processamento**:
    - Para SQL: processa o arquivo removendo campos ou executando instruções
    - Para migração: gera instruções DELETE e ordena inserções corretamente
 4. **Resultados**: Exibe um relatório detalhado do processamento
@@ -163,8 +184,10 @@ O processo de geração de instruções MongoDB segue estas etapas:
 2. **Processamento**: Processa o arquivo, removendo campos específicos (item_number, legacy_redemption_id)
 3. **Resultados**: Gera instruções MongoDB para atualização de pontos
 4. **Atualização**: Atualiza as collections:
-  - `ledgers`: campos `points` e `pointsBlocked`
-  - `balances`: campos `points`, `pointsAvailable` e `pointsBlocked`
+
+- `ledgers`: campos `points` e `pointsBlocked`
+- `balances`: campos `points`, `pointsAvailable` e `pointsBlocked`
+
 5. **Suporte**: Suporta execução automática após geração
 
 ### Processamento de CPFs do CSV
@@ -178,6 +201,7 @@ O processo de processamento de CPFs do CSV segue estas etapas:
 ## 📋 Modelos e Entidades
 
 ### Ledger (Entidade de Domínio)
+
 ```csharp
 public class Ledger
 {
@@ -191,6 +215,7 @@ public class Ledger
 ```
 
 ### CsvMember (DTO)
+
 ```csharp
 public class CsvMember
 {
@@ -200,6 +225,7 @@ public class CsvMember
 ```
 
 ### ImportResult (Modelo)
+
 ```csharp
 public class ImportResult
 {
@@ -247,20 +273,23 @@ public class ImportResult
         }
       }
     ],
-    "Enrich": [ "FromLogContext", "WithMachineName", "WithThreadId" ]
+    "Enrich": ["FromLogContext", "WithMachineName", "WithThreadId"]
   }
 }
 ```
 
 ## 🔍 Como Usar
+
 Para aproveitar todos os recursos do **ToolBox**, siga as instruções abaixo para cada funcionalidade disponível mediante seleção no menu:
 
 ### 🚀 **1. Importação CSV para MongoDB**
+
 - Execute o ToolBox, digite `1` e pressione `Enter`
 - Informe o caminho completo para o arquivo CSV
 - O sistema irá processar automaticamente o arquivo, mostrando o progresso e exibindo um relatório ao final
 
 ### 🛠️ **2. Formatação de Arquivos JSONL**
+
 - Execute o ToolBox, digite `2` e pressione `Enter`
 - Informe o caminho completo para o arquivo JSONL
 - Informe quais campos deseja extrair
@@ -268,6 +297,7 @@ Para aproveitar todos os recursos do **ToolBox**, siga as instruções abaixo pa
 - Ao concluir, o arquivo formatado com os campos escolhidos será gerado automaticamente com o prefixo `_formatted`
 
 ### 🔄 **3. Buscar e Substituir Textos em Arquivos**
+
 - Execute o ToolBox, digite `3` e pressione `Enter`
 - Informe o caminho completo até o arquivo que pretende processar
 - Digite o texto que você deseja buscar entre as linhas do arquivo
@@ -278,6 +308,7 @@ Para aproveitar todos os recursos do **ToolBox**, siga as instruções abaixo pa
 - Ao terminar, será exibido um resumo completo com a localização do arquivo de saída gerado com sufixo `_replaced`
 
 ### 🚀 **4. Publicação de dados JSONL no Redis**
+
 - Execute o ToolBox, digite `4` e pressione `Enter`
 - Informe o caminho do arquivo JSONL
 - Informe o campo JSON a ser usado como Chave
@@ -286,6 +317,7 @@ Para aproveitar todos os recursos do **ToolBox**, siga as instruções abaixo pa
 - Exibe relatório com total de entradas publicadas e o tempo consumido ao concluir
 
 ### 📄 **5. Processar Arquivo SQL e Migração**
+
 - Execute o ToolBox, digite `5` e pressione `Enter`
 - Escolha entre:
   - Remover campos específicos
@@ -298,6 +330,7 @@ Para aproveitar todos os recursos do **ToolBox**, siga as instruções abaixo pa
   - Gere o arquivo formatado com deleções e inserções ordenadas
 
 ### 🚀 **6. Geração de Instruções MongoDB**
+
 - Execute o ToolBox, digite `6` e pressione `Enter`
 - Informe o caminho do arquivo de migração SQL
 - O processamento iniciará imediatamente, processando o arquivo e gerando instruções MongoDB
@@ -306,6 +339,7 @@ Para aproveitar todos os recursos do **ToolBox**, siga as instruções abaixo pa
   - Instruções MongoDB para atualização de pontos
 
 ### 🚀 **7. Processar CPFs do CSV**
+
 - Execute o ToolBox, digite `7` e pressione `Enter`
 - Informe o caminho do arquivo CSV com os CPFs
 - Informe o caminho do arquivo JSONL com os dados
@@ -348,15 +382,16 @@ Relatório de processamento:
 A aplicação segue princípios modernos de design:
 
 - 🎯 **Domain-Driven Design (DDD)**
-    - Entidades ricas com comportamento encapsulado
-    - Exceções de domínio personalizadas
+
+  - Entidades ricas com comportamento encapsulado
+  - Exceções de domínio personalizadas
 
 - 🔄 **Padrões de Design**
-    - Injeção de Dependência
-    - Repository Pattern
-    - Service Pattern
-    - Princípios SOLID
-    - Progress Bar Service Pattern (centralização da lógica de barras de progresso)
+  - Injeção de Dependência
+  - Repository Pattern
+  - Service Pattern
+  - Princípios SOLID
+  - Progress Bar Service Pattern (centralização da lógica de barras de progresso)
 
 ## 🔍 Requisitos
 

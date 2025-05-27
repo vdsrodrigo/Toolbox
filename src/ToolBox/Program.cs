@@ -18,14 +18,12 @@ try
         Console.WriteLine("\nEscolha uma opção:");
         Console.WriteLine("1. Importar CSV para MongoDB");
         Console.WriteLine("2. Converter JSON para Redis");
-        Console.WriteLine("3. Formatar arquivo JSON");
-        Console.WriteLine("4. Processar arquivo SQL");
+        Console.WriteLine("3. Formatar arquivo JSON"); Console.WriteLine("4. Processar arquivo SQL");
         Console.WriteLine("5. Formatar arquivo de migração");
         Console.WriteLine("6. Processar CPFs do CSV");
+        Console.WriteLine("7. Importar JSONL para PostgreSQL");
         Console.WriteLine("0 - Sair");
-        Console.Write("\nSua escolha: ");
-
-        if (int.TryParse(Console.ReadLine(), out int option))
+        Console.Write("\nSua escolha: "); if (int.TryParse(Console.ReadLine(), out int option))
         {
             switch (option)
             {
@@ -38,6 +36,7 @@ try
                 case 4:
                 case 5:
                 case 6:
+                case 7:
                     await consoleService.ProcessOptionAsync(option);
                     break;
                 default:

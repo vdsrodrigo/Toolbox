@@ -13,6 +13,7 @@ public class ConsoleService : IConsoleService
     private readonly ITextReplacementService _textReplacementService;
     private readonly ISqlFileService _sqlFileService;
     private readonly IMigrationFileService _migrationFileService;
+    private readonly IJsonToPostgresService _jsonToPostgresService;
     private readonly ILogger<ConsoleService> _logger;
     private readonly ClienteDataProcessor _clienteDataProcessor;
 
@@ -23,6 +24,7 @@ public class ConsoleService : IConsoleService
         ITextReplacementService textReplacementService,
         ISqlFileService sqlFileService,
         IMigrationFileService migrationFileService,
+        IJsonToPostgresService jsonToPostgresService,
         ILogger<ConsoleService> logger,
         ClienteDataProcessor clienteDataProcessor)
     {
@@ -32,6 +34,7 @@ public class ConsoleService : IConsoleService
         _textReplacementService = textReplacementService;
         _sqlFileService = sqlFileService;
         _migrationFileService = migrationFileService;
+        _jsonToPostgresService = jsonToPostgresService;
         _logger = logger;
         _clienteDataProcessor = clienteDataProcessor;
     }
@@ -65,7 +68,7 @@ public class ConsoleService : IConsoleService
     {
         Console.WriteLine($"ERROR: {message}");
     }
-    
+
     public async Task ImportCsvToMongoAsync(IServiceProvider serviceProvider)
     {
         Console.WriteLine("\nImportação de CSV para MongoDB");
@@ -263,7 +266,6 @@ public class ConsoleService : IConsoleService
             await ProcessOptionAsync(option);
         }
     }
-
     public async Task ProcessOptionAsync(int option)
     {
         try
@@ -287,6 +289,9 @@ public class ConsoleService : IConsoleService
                     break;
                 case 6:
                     await ProcessCpfFilterAsync();
+                    break;
+                case 7:
+                    await ProcessJsonToPostgresAsync();
                     break;
                 default:
                     Console.WriteLine("Opção inválida!");
@@ -535,5 +540,36 @@ public class ConsoleService : IConsoleService
     {
         Console.Write(prompt + ": ");
         return Console.ReadLine();
+    }
+
+    public async Task ProcessJsonToPostgresAsync()
+    {
+        Console.WriteLine("\nImportação de JSONL para PostgreSQL");
+        Console.WriteLine("==================================");
+
+        var defaultJsonlFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "members.jsonl");
+        Console.WriteLine($"Arquivo JSONL padrão: {defaultJsonlFilePath}");
+        Console.Write("Digite o caminho do arquivo JSONL (ou pressione Enter para usar o padrão): ");
+
+        var input = Console.ReadLine();
+        var jsonlFilePath = string.IsNullOrWhiteSpace(input) ? defaultJsonlFilePath : input;
+
+        if (!File.Exists(jsonlFilePath))
+        {
+            Console.WriteLine($"ERRO: Arquivo não encontrado: {jsonlFilePath}");
+            return;
+        }
+
+        try
+        {
+            Console.WriteLine($"\nIniciando importação do arquivo: {jsonlFilePath}");
+            var result = await _jsonToPostgresService.ImportJsonlToPostgresAsync(jsonlFilePath);
+            DisplayImportResult(result);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"ERRO: Falha na importação: {ex.Message}");
+            _logger.LogError(ex, "Erro ao importar JSONL para PostgreSQL");
+        }
     }
 }

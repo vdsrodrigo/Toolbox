@@ -61,13 +61,20 @@ public class ProgressBarService : IProgressBarService
         _childProgressBar?.Dispose();
         _progressBar?.Dispose();
     }
-}
 
-public interface IProgressBarService
-{
-    void InitializeProgressBar(int totalTicks, string message);
-    void InitializeChildProgressBar(int totalTicks, string message);
-    void UpdateProgress(int currentTick, string? message = null);
-    void UpdateChildProgress(int currentTick, string? message = null);
-    void Dispose();
-} 
+    // New methods for the JsonToPostgresService and other services
+    public void Initialize(long totalTicks, string message)
+    {
+        InitializeProgressBar((int)totalTicks, message);
+    }
+
+    public void Report(long currentTick, string? message = null)
+    {
+        UpdateProgress((int)currentTick, message);
+    }
+
+    public void Complete()
+    {
+        Dispose();
+    }
+}

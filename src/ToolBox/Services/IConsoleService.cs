@@ -11,6 +11,7 @@ public interface IConsoleService
     Task ProcessJsonToRedisAsync();
     Task ProcessJsonFormatterAsync();
     Task ProcessSqlFileAsync();
+    Task ProcessJsonToPostgresAsync();
     void DisplayHeader();
     Task ProcessOptionAsync(int option);
 }

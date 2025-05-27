@@ -1,0 +1,5 @@
+{"_id":{"$oid":"67c2130eb61bdd4abb7ee1b3"},"cpf":"03463817705","createdAt":{"$date":"2025-05-01T06:51:13.01Z"},"ledgerTypeId":1,"points":3346,"pointsBlocked":0,"status":"Ativo"}
+{"_id":{"$oid":"67c2130eb61bdd4abb7ee1b4"},"cpf":"11122233344","createdAt":{"$date":"2025-05-02T08:32:45.78Z"},"ledgerTypeId":1,"points":1250,"pointsBlocked":100,"status":"Ativo"}
+{"_id":{"$oid":"67c2130eb61bdd4abb7ee1b5"},"cpf":"55566677788","createdAt":{"$date":"2025-05-03T14:22:11.45Z"},"ledgerTypeId":1,"points":750,"pointsBlocked":0,"status":"Ativo"}
+{"_id":{"$oid":"67c2130eb61bdd4abb7ee1b6"},"cpf":"99900011122","createdAt":{"$date":"2025-05-04T19:15:32.89Z"},"ledgerTypeId":1,"points":5000,"pointsBlocked":250,"status":"Ativo"}
+{"_id":{"$oid":"67c2130eb61bdd4abb7ee1b7"},"cpf":"33344455566","createdAt":{"$date":"2025-05-05T11:47:19.62Z"},"ledgerTypeId":1,"points":2100,"pointsBlocked":0,"status":"Ativo"}
