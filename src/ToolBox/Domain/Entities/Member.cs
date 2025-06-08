@@ -5,14 +5,15 @@ namespace ToolBox.Domain.Entities;
 public class Member
 {
     public int Id { get; set; }
-    public string LedgerCustomerId { get; set; }
+    public required string LedgerCustomerId { get; set; }
     public Guid ExternalId { get; set; }
-    public string Cpf { get; set; }
-    public string LedgerTypeId { get; set; }
+    public required string Cpf { get; set; }
+    public required string LedgerTypeId { get; set; }
     public int? Points { get; set; }
     public int PointsBlocked { get; set; }
-    public string Status { get; set; }
+    public required string Status { get; set; }
     public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
 
     public Member() { } // Constructor for Entity Framework and JSONL deserialization
 
@@ -33,7 +34,8 @@ public class Member
             Points = null,
             PointsBlocked = 0,
             Status = "Ativo",
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         };
     }
     public static Guid GenerateUUIDv7()

@@ -76,11 +76,12 @@ public class JsonToPostgresService : IJsonToPostgresService
                             LedgerCustomerId = ledgerCustomerId,
                             ExternalId = Member.GenerateUUIDv7(),
                             Cpf = jsonMember.Cpf,
-                            LedgerTypeId = ledgerTypeId,
-                            Points = jsonMember.Points,
+                            LedgerTypeId = ledgerTypeId.ToLowerInvariant(), // Converter para minúsculo
+                            Points = jsonMember.Points ?? 0, // Usar 0 como padrão quando Points for nulo
                             PointsBlocked = jsonMember.PointsBlocked,
-                            Status = jsonMember.Status,
-                            CreatedAt = jsonMember.CreatedAt?.ToDateTime() ?? DateTime.UtcNow
+                            Status = (jsonMember.Status ?? "ativo").ToLowerInvariant(), // Usar "ativo" como padrão e converter para minúsculo
+                            CreatedAt = jsonMember.CreatedAt?.ToDateTime() ?? DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
                         };
 
                         batch.Add(member);
@@ -162,8 +163,8 @@ public class JsonToPostgresService : IJsonToPostgresService
     {
         return ledgerTypeId switch
         {
-            1 => "Stix",
-            _ => "Stix"  // Default to Stix for now
+            1 => "stix", // Valor em minúsculo
+            _ => "stix"  // Default em minúsculo
         };
     }
 }

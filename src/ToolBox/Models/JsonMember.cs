@@ -18,7 +18,7 @@ public class JsonMember
     public int LedgerTypeId { get; set; }
 
     [JsonPropertyName("points")]
-    public int Points { get; set; }
+    public int? Points { get; set; }
 
     [JsonPropertyName("pointsBlocked")]
     public int PointsBlocked { get; set; }
